@@ -1,0 +1,22 @@
+# OS Files
+.DS_Store
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Node / Frontend Build
+node_modules/
+dist/
+
+# Maven / Java Build
+target/
+
+# Python Cache & Bytecode
+__pycache__/
+*.pyc
+
+# IDEs & Editors
+.idea/
+.vscode/

@@ -1,0 +1,263 @@
+[
+  {
+    "test_name": "Category - List Existing",
+    "method": "GET /api/categories",
+    "expected": "200 OK with list",
+    "actual_status": 200,
+    "actual": "Found 5 categories",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Category - Create",
+    "method": "POST /api/categories",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Created ID 21",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Category - Get by ID",
+    "method": "GET /api/categories/21",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Phase2_Test_Cat_51186160",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Category - Update",
+    "method": "PUT /api/categories/21",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Phase2_Test_Cat_Upd_51186160",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Category - Delete",
+    "method": "DELETE /api/categories/21",
+    "expected": "204 No Content",
+    "actual_status": 204,
+    "actual": "Deleted successfully",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Supplier - List Existing",
+    "method": "GET /api/suppliers",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Found 3 suppliers",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Supplier - Create",
+    "method": "POST /api/suppliers",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Created ID 18",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Supplier - Delete",
+    "method": "DELETE /api/suppliers/18",
+    "expected": "204 No Content",
+    "actual_status": 204,
+    "actual": "Deleted successfully",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Customer - List Existing",
+    "method": "GET /api/customers",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Found 4 customers",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Customer - Create",
+    "method": "POST /api/customers",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Created ID 21",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Customer - Delete",
+    "method": "DELETE /api/customers/21",
+    "expected": "204 No Content",
+    "actual_status": 204,
+    "actual": "Deleted successfully",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Medicine - List Existing",
+    "method": "GET /api/medicines",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Found 11 medicines",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Medicine - Search",
+    "method": "GET /api/medicines?search=Paracetamol",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Search returned 1 results",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Medicine - Low Stock Filter",
+    "method": "GET /api/medicines/low-stock",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Low stock count: 0",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Medicine - Expiry Alerts Filter",
+    "method": "GET /api/medicines/expiry-alerts",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Expiry alerts count: 0",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Medicine - Create Test Med",
+    "method": "POST /api/medicines",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Created ID 29 with stock 50",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Purchase - Create Purchase",
+    "method": "POST /api/purchases",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Purchase ID 22",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Purchase - DB Stock Increase Trigger",
+    "method": "GET /api/medicines/{id}",
+    "expected": "Stock updated from 50 to 70",
+    "actual_status": 200,
+    "actual": "Current stock: 70",
+    "result": "PASS",
+    "notes": "Verified PostgreSQL trg_increase_stock executed automatically"
+  },
+  {
+    "test_name": "Billing - Create Valid Bill",
+    "method": "POST /api/bills",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Bill ID 19, Total: 382.5",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Billing - DB Stock Reduction Trigger & Single Reduction",
+    "method": "GET /api/medicines/{id}",
+    "expected": "Stock reduced from 70 to 55",
+    "actual_status": 200,
+    "actual": "Current stock: 55",
+    "result": "PASS",
+    "notes": "Verified PostgreSQL trg_reduce_stock executed; stock NOT reduced twice"
+  },
+  {
+    "test_name": "Billing - DB Stock Audit Mechanism",
+    "method": "GET /api/reports/audit",
+    "expected": "Audit entry logged with oldStock-newStock = 15",
+    "actual_status": 200,
+    "actual": "Audit ID 38",
+    "result": "PASS",
+    "notes": "Verified stock_audit logging"
+  },
+  {
+    "test_name": "Billing - Insufficient Stock Rejection",
+    "method": "POST /api/bills (qty 100 vs stock 55)",
+    "expected": "400 Bad Request INSUFFICIENT_STOCK",
+    "actual_status": 400,
+    "actual": "ErrorCode: INSUFFICIENT_STOCK, Message: Insufficient stock for Phase2_TestMed. Available stock: 55, requested quantity: 100",
+    "result": "PASS",
+    "notes": "Verified error handling and stock protection"
+  },
+  {
+    "test_name": "Billing - Stock Unchanged After Rejected Bill",
+    "method": "GET /api/medicines/{id}",
+    "expected": "Stock remains 55",
+    "actual_status": 200,
+    "actual": "Stock: 55",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Validation - Invalid Medicine Payload",
+    "method": "POST /api/medicines with blank name & negative price",
+    "expected": "400 Bad Request VALIDATION_ERROR",
+    "actual_status": 400,
+    "actual": "Message: Category is required; Medicine name is required; Price must be positive",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Error Handling - Resource Not Found",
+    "method": "GET /api/medicines/999999",
+    "expected": "404 Not Found RESOURCE_NOT_FOUND",
+    "actual_status": 404,
+    "actual": "Message: Medicine not found with ID: 999999",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Reports - Inventory Summary",
+    "method": "GET /api/reports/inventory",
+    "expected": "200 OK with totalMedicines & totalInventoryValue",
+    "actual_status": 200,
+    "actual": "Total Meds: 12, Total Value: RS 51897.5",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Reports - Sales Summary",
+    "method": "GET /api/reports/sales",
+    "expected": "200 OK with sales list",
+    "actual_status": 200,
+    "actual": "Sales records count: 15",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Medicine - Delete Medicine",
+    "method": "DELETE /api/medicines/30",
+    "expected": "204 No Content",
+    "actual_status": 204,
+    "actual": "Deleted standalone medicine successfully",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "test_name": "Cleanup - Verify No Orphan Test Data",
+    "method": "SQL Cleanup",
+    "expected": "Clean DB state",
+    "actual_status": 200,
+    "actual": "Cleaned test records from pharmacy_db",
+    "result": "PASS",
+    "notes": ""
+  }
+]

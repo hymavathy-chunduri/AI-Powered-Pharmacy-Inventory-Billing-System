@@ -1,0 +1,232 @@
+[
+  {
+    "phase": "PHASE 4",
+    "test_name": "Dashboard - Medicines Count",
+    "method": "GET /api/medicines",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Count: 12",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Dashboard - Low Stock Alerts",
+    "method": "GET /api/medicines/low-stock",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Low stock count: 0",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Dashboard - Expiry Alerts",
+    "method": "GET /api/medicines/expiry-alerts",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Expiry count: 0",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Dashboard - Customer Count",
+    "method": "GET /api/customers",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Customer count: 4",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Dashboard - Recent Bills",
+    "method": "GET /api/bills",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Bill count: 14",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Categories - Add Category",
+    "method": "POST /api/categories",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Created ID 22",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Categories - Update Category",
+    "method": "PUT /api/categories/22",
+    "expected": "200 OK",
+    "actual_status": 200,
+    "actual": "Name: E2E_Test_Cat_Upd_51186160",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Categories - Delete Category",
+    "method": "DELETE /api/categories/22",
+    "expected": "204 No Content",
+    "actual_status": 204,
+    "actual": "Deleted successfully",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Suppliers - Add Supplier",
+    "method": "POST /api/suppliers",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Created ID 19",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Suppliers - Delete Supplier",
+    "method": "DELETE /api/suppliers/19",
+    "expected": "204 No Content",
+    "actual_status": 204,
+    "actual": "Deleted successfully",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Customers - Add Customer",
+    "method": "POST /api/customers",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Created ID 22",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 4",
+    "test_name": "Customers - Delete Customer",
+    "method": "DELETE /api/customers/22",
+    "expected": "204 No Content",
+    "actual_status": 204,
+    "actual": "Deleted successfully",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 5",
+    "test_name": "E2E 1. Add Medicine",
+    "method": "POST /api/medicines",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Created ID 31 with initial stock 100",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 5",
+    "test_name": "E2E 2. Purchase Shipment",
+    "method": "POST /api/purchases",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Purchase ID 23",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 5",
+    "test_name": "E2E 3. Verify Stock Increased via Trigger",
+    "method": "GET /api/medicines/{id}",
+    "expected": "Stock updated 100 -> 130",
+    "actual_status": 200,
+    "actual": "Current Stock: 130",
+    "result": "PASS",
+    "notes": "Verified PostgreSQL trg_increase_stock executed automatically"
+  },
+  {
+    "phase": "PHASE 5",
+    "test_name": "E2E 4. Create Valid Customer Bill",
+    "method": "POST /api/bills",
+    "expected": "201 Created",
+    "actual_status": 201,
+    "actual": "Bill ID 20, Total: 1250.0",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 5",
+    "test_name": "E2E 5. Verify Stock Reduced ONCE via Trigger",
+    "method": "GET /api/medicines/{id}",
+    "expected": "Stock reduced 130 -> 105",
+    "actual_status": 200,
+    "actual": "Current Stock: 105",
+    "result": "PASS",
+    "notes": "Verified PostgreSQL trg_reduce_stock executed; stock NOT reduced twice"
+  },
+  {
+    "phase": "PHASE 5",
+    "test_name": "E2E 6. Verify Stock Audit Entry Logged",
+    "method": "GET /api/reports/audit",
+    "expected": "Audit logged 130 -> 105",
+    "actual_status": 200,
+    "actual": "Audit ID 40",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 5",
+    "test_name": "E2E 7. Insufficient Stock Rejection",
+    "method": "POST /api/bills (qty 500 vs stock 105)",
+    "expected": "400 Bad Request INSUFFICIENT_STOCK",
+    "actual_status": 400,
+    "actual": "Message: Insufficient stock for E2E_Demo_Medicine. Available stock: 105, requested quantity: 500",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 5",
+    "test_name": "E2E 8. Stock Unchanged After Rejected Bill",
+    "method": "GET /api/medicines/{id}",
+    "expected": "Stock remains 105",
+    "actual_status": 200,
+    "actual": "Current Stock: 105",
+    "result": "PASS",
+    "notes": ""
+  },
+  {
+    "phase": "PHASE 6",
+    "test_name": "ML Model Training & Evaluation",
+    "method": "GET /api/predictions",
+    "expected": "200 OK with Scikit-Learn Metrics",
+    "actual_status": 200,
+    "actual": "Champion Model: RandomForestRegressor, RF R2: 0.8305, MAE: 2.1861",
+    "result": "PASS",
+    "notes": "Verified LinearRegression & RandomForestRegressor evaluation"
+  },
+  {
+    "phase": "PHASE 7",
+    "test_name": "Reorder Recommendation Formula",
+    "method": "GET /api/predictions",
+    "expected": "Transparent Reorder Advisory",
+    "actual_status": 200,
+    "actual": "Generated reorder advisories for 8 medicines",
+    "result": "PASS",
+    "notes": "Formula: Max(0, Predicted Demand + Safety Buffer - Stock)"
+  },
+  {
+    "phase": "CLEANUP",
+    "test_name": "Delete E2E Demo Medicine & Test Records",
+    "method": "SQL Cleanup",
+    "expected": "Clean DB state",
+    "actual_status": 200,
+    "actual": "Cleaned test records from pharmacy_db",
+    "result": "PASS",
+    "notes": ""
+  }
+]
