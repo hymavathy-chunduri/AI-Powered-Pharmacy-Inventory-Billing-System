@@ -1,44 +1,55 @@
 package com.pharmacy.pharmacy_backend.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "purchases")
+/**
+ * Purchase document — contains embedded PurchaseItem array.
+ * Supplier is a DBRef (independent collection).
+ * Business logic (stock increase + audit) is handled in PurchaseService.
+ */
+@Document(collection = "purchases")
 public class Purchase {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "purchase_id")
-    private Long purchaseId;
+    private String id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "supplier_id", nullable = false)
+    @DBRef
+    @Field("supplier")
     private Supplier supplier;
 
-    @Column(name = "purchase_date", nullable = false)
+    @Field("purchase_date")
     private LocalDate purchaseDate;
 
-    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
+    @Field("total_amount")
     private BigDecimal totalAmount;
 
-    @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Field("items")
     private List<PurchaseItem> items = new ArrayList<>();
 
-    public Purchase() {
-        this.purchaseDate = LocalDate.now();
-        this.totalAmount = BigDecimal.ZERO;
+    public Purchase() {}
+
+    public String getPurchaseId() {
+        return id;
     }
 
-    public Long getPurchaseId() {
-        return purchaseId;
+    public void setPurchaseId(String purchaseId) {
+        this.id = purchaseId;
     }
 
-    public void setPurchaseId(Long purchaseId) {
-        this.purchaseId = purchaseId;
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public Supplier getSupplier() {
@@ -75,6 +86,5 @@ public class Purchase {
 
     public void addItem(PurchaseItem item) {
         items.add(item);
-        item.setPurchase(this);
     }
 }

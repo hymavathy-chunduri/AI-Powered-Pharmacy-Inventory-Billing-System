@@ -1,50 +1,51 @@
-# 💊 Pharmacy Inventory & Billing System
+# 💊 AI-Powered Pharmacy Inventory & Billing System
 
-A complete **B.Tech CSE Final-Year Project System** featuring an integrated PostgreSQL relational database, Spring Boot REST backend, modern React POS frontend, and Scikit-Learn Python ML Demand Prediction Module.
+A complete **B.Tech CSE Final-Year Project** featuring MongoDB Atlas as the cloud database, Spring Boot REST backend, modern React POS frontend, and Scikit-Learn Python ML Demand Prediction Module.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```text
-                                PHARMACY INVENTORY
-                                & BILLING SYSTEM
-                                       │
-                                       ▼
-                                ┌─────────────┐
-                                │  React POS  │
-                                │ Frontend UI │
-                                └──────┬──────┘
-                                       │
-                                 REST API (HTTP)
-                                       │
-                                       ▼
-                                ┌─────────────┐
-                                │ Spring Boot │
-                                │   Backend   │
-                                └──────┬──────┘
-                                       │
-                                 Spring Data JPA
-                                       │
-                                       ▼
-                                ┌─────────────┐
-                                │ PostgreSQL  │
-                                │ pharmacy_db │
-                                └──────┬──────┘
-                                       │
-                                Historical Sales
-                                       │
-                                       ▼
-                                ┌─────────────┐
-                                │ Python ML   │
-                                │   Module    │
-                                └──────┬──────┘
-                                       │
-                                       ▼
-                              Demand Prediction
-                                       │
-                                       ▼
-                             Reorder Recommendation
+                            PHARMACY INVENTORY
+                            & BILLING SYSTEM
+                                   │
+                                   ▼
+                            ┌─────────────┐
+                            │  React POS  │
+                            │ Frontend UI │
+                            └──────┬──────┘
+                                   │
+                             REST API (HTTP)
+                                   │
+                                   ▼
+                            ┌─────────────┐
+                            │ Spring Boot │
+                            │   Backend   │
+                            └──────┬──────┘
+                                   │
+                           Spring Data MongoDB
+                                   │
+                                   ▼
+                            ┌─────────────┐
+                            │  MongoDB    │
+                            │   Atlas     │
+                            │ (Cloud DB)  │
+                            └──────┬──────┘
+                                   │
+                            Historical Sales
+                                   │
+                                   ▼
+                            ┌─────────────┐
+                            │  Python ML  │
+                            │   Module    │
+                            └──────┬──────┘
+                                   │
+                                   ▼
+                          Demand Prediction
+                                   │
+                                   ▼
+                         Reorder Recommendation
 ```
 
 ---
@@ -53,57 +54,104 @@ A complete **B.Tech CSE Final-Year Project System** featuring an integrated Post
 
 | Layer | Technology Used |
 | :--- | :--- |
-| **Database** | PostgreSQL 17, PL/pgSQL, Triggers, Views, Functions |
-| **Backend** | Java 17, Spring Boot 3.2.4, Spring Data JPA, Jakarta Validation |
+| **Database** | MongoDB Atlas (Cloud), Spring Data MongoDB |
+| **Backend** | Java 17, Spring Boot 3.2.4, Spring Data MongoDB, Jakarta Validation |
 | **Frontend** | React 18, Vite 5, Lucide Icons, Modern Vanilla CSS |
-| **Machine Learning** | Python 3, Scikit-Learn, Pandas, NumPy, Flask |
+| **Machine Learning** | Python 3, Scikit-Learn, Pandas, NumPy, Flask, PyMongo |
 | **Build Tools** | Maven 3.9, npm |
 
 ---
 
-## 🗄️ Database Schema & Features (`pharmacy_db`)
+## 🗄️ MongoDB Collections
 
-The PostgreSQL database contains **10 core relational tables**:
-1. `users` — System authentication & role management
-2. `categories` — Medicine therapeutic categories
-3. `suppliers` — Medicine distributors & vendor details
-4. `medicines` — Item master, unit prices, stock level, expiry date
-5. `customers` — Customer directory & contact records
-6. `purchases` — Inbound supplier purchase orders
-7. `purchase_items` — Itemized purchase order breakdown
-8. `bills` — Customer sales invoices & payment modes
-9. `bill_items` — Itemized sale invoice breakdown
-10. `stock_audit` — Automated audit log populated by PostgreSQL triggers
+The system uses the following MongoDB collections:
 
-### Database Automation (PL/pgSQL Triggers & Views)
-* `trg_reduce_stock` -> Executes `reduce_stock()` after billing to decrease stock and record audit log.
-* `trg_increase_stock` -> Executes `increase_stock()` after purchase to increase stock and record audit log.
-* `inventory_view`, `sales_report`, `low_stock_view`, `expiry_alert_view` -> Reporting views.
+| Collection | Description |
+| :--- | :--- |
+| `categories` | Medicine therapeutic categories |
+| `suppliers` | Medicine distributors & vendor details |
+| `medicines` | Item master: unit prices, stock level, expiry date |
+| `customers` | Customer directory & contact records |
+| `purchases` | Inbound supplier purchase orders (with embedded items array) |
+| `bills` | Customer sales invoices (with embedded items array) |
+| `stock_audit` | Automated audit log written by the service layer |
+| `users` | System authentication & role management |
+
+### Document Design
+
+- **purchases** and **bills** use **embedded arrays** for their line items (denormalized for read efficiency)
+- **medicines** references **categories** via `@DBRef` (independent collections)
+- **purchases** references **suppliers** via `@DBRef`
+- **bills** references **customers** via `@DBRef`
+
+### Business Logic (replaces PostgreSQL PL/pgSQL triggers)
+
+| Old PostgreSQL Trigger | New MongoDB Implementation |
+| :--- | :--- |
+| `trg_increase_stock` + `increase_stock()` | `PurchaseService.createPurchase()` — increases `stock_quantity` |
+| `trg_reduce_stock` + `reduce_stock()` | `BillingService.createBill()` — decreases `stock_quantity` |
+| `trg_stock_audit` + `audit_stock_change()` | Both services write to `stock_audit` collection |
+| `trg_update_purchase_total` | `PurchaseService` — calculates total inline |
+| `trg_update_bill_total` | `BillingService` — calculates total inline |
 
 ---
 
-## 🚀 Getting Started & Running the System
+## 🚀 Getting Started
 
 ### 1. Prerequisites
-Ensure PostgreSQL 17 is running on port `5432` with database `pharmacy_db`.
 
-### 2. Start Python ML Module
+- Java 17+
+- Maven 3.9+
+- Node.js 18+
+- Python 3.10+
+- A **MongoDB Atlas** account with a cluster created
+
+### 2. MongoDB Atlas Setup
+
+1. Create a free cluster at [cloud.mongodb.com](https://cloud.mongodb.com)
+2. Create a database user with read/write access
+3. Add your IP to the IP Access List (or allow `0.0.0.0/0` for development)
+4. Copy the connection string from **Connect → Drivers**
+
+### 3. Configure Environment Variables
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env and fill in your real MongoDB Atlas connection string
+# MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/
+```
+
+### 4. Seed the Database (optional)
+
+```bash
+cd database/seed
+MONGODB_URI="your-connection-string" python3 seed_mongodb.py
+```
+
+### 5. Start Python ML Module
+
 ```bash
 cd pharmacy-ml
-python3 demand_predictor.py
+pip install -r requirements.txt
+MONGODB_URI="your-connection-string" python3 demand_predictor.py
 ```
 *Runs on `http://localhost:5001`*
 
-### 3. Start Spring Boot Backend
+### 6. Start Spring Boot Backend
+
 ```bash
 cd pharmacy-backend
-mvn spring-boot:run
+MONGODB_URI="your-connection-string" mvn spring-boot:run
 ```
 *Runs on `http://localhost:8080`*
 
-### 4. Start React Frontend
+### 7. Start React Frontend
+
 ```bash
 cd pharmacy-frontend
+npm install
 npm run dev
 ```
 *Runs on `http://localhost:3000`*
@@ -113,40 +161,49 @@ npm run dev
 ## 📡 Core REST API Endpoints
 
 ### Medicines API
-* `GET /api/medicines` — List all medicines or search (`?search=Paracetamol`)
-* `GET /api/medicines/{id}` — Fetch medicine details
-* `POST /api/medicines` — Create new medicine
-* `PUT /api/medicines/{id}` — Update medicine details
-* `DELETE /api/medicines/{id}` — Delete medicine
-* `GET /api/medicines/low-stock` — Fetch low-stock alert list
-* `GET /api/medicines/expiry-alerts` — Fetch expiring medicines list
+- `GET /api/medicines` — List all medicines or search (`?search=Paracetamol`)
+- `GET /api/medicines/{id}` — Fetch medicine details
+- `POST /api/medicines` — Create new medicine
+- `PUT /api/medicines/{id}` — Update medicine details
+- `DELETE /api/medicines/{id}` — Delete medicine
+- `GET /api/medicines/low-stock` — Fetch low-stock alert list (stock ≤ 15)
+- `GET /api/medicines/expiry-alerts` — Fetch medicines expiring within 30 days
 
 ### Billing & POS API
-* `POST /api/bills` — Process customer bill (pre-validates stock, triggers automated PostgreSQL stock reduction & audit log)
-* `GET /api/bills` — Fetch all customer bills
+- `POST /api/bills` — Process customer bill (validates stock, decreases stock, creates audit)
+- `GET /api/bills` — Fetch all customer bills
+- Returns **HTTP 400** with `errorCode: INSUFFICIENT_STOCK` if stock is insufficient
 
 ### Purchases API
-* `POST /api/purchases` — Record supplier shipment (triggers automated PostgreSQL stock increase)
-* `GET /api/purchases` — Fetch all purchases
+- `POST /api/purchases` — Record supplier shipment (increases stock, creates audit)
+- `GET /api/purchases` — Fetch all purchases
+
+### Reports API
+- `GET /api/reports/inventory` — Inventory report (total medicines, low-stock count, total value)
+- `GET /api/reports/sales` — Sales report (aggregated from bill items)
+- `GET /api/reports/audit` — Stock audit log
 
 ### AI Demand Prediction API
-* `GET /api/predictions` — Fetch ML model metrics (Linear Regression vs Random Forest), 30-day demand predictions & reorder recommendations.
+- `GET /api/predictions` — ML model metrics + 30-day demand predictions & reorder recommendations
 
 ---
 
 ## 🤖 AI / Machine Learning Methodology
 
+### Data Source
+When `MONGODB_URI` is configured, the ML module reads live sales data from the MongoDB `bills` collection. Otherwise, it uses a 1,440-sample historical dataset.
+
 ### Feature Engineering
-Model input features: `medicine_id`, `day_of_week`, `day_of_month`, `month`.
+Model input features: `medicine_id`, `day_of_week`, `day_of_month`, `month`
 
 ### Evaluated Models
 1. **Linear Regression**
-2. **Random Forest Regressor** (Champion Model)
+2. **Random Forest Regressor** (Champion Model — higher R²)
 
 ### Model Evaluation Metrics
-* **MAE** (Mean Absolute Error)
-* **RMSE** (Root Mean Squared Error)
-* **R² Score** (Coefficient of Determination)
+- **MAE** (Mean Absolute Error)
+- **RMSE** (Root Mean Squared Error)
+- **R² Score** (Coefficient of Determination)
 
 ### Reorder Recommendation Formula
 $$\text{Recommended Reorder Qty} = \max\left(0, \text{Predicted 30-Day Demand} + \text{Safety Buffer (15)} - \text{Current Stock}\right)$$
@@ -155,9 +212,10 @@ $$\text{Recommended Reorder Qty} = \max\left(0, \text{Predicted 30-Day Demand} +
 
 ## 🔬 Testing & Verification
 
-1. **Backend Tests**: Run `mvn test` inside `pharmacy-backend`.
-2. **Stock Validation**: Attempts to bill > available stock return HTTP 400 `INSUFFICIENT_STOCK`.
-3. **Database Audit**: All stock updates automatically generate rows in `stock_audit`.
+1. **Backend Tests**: `cd pharmacy-backend && mvn test`  
+   Uses embedded Flapdoodle MongoDB — no external database needed.
+2. **Stock Validation**: Attempts to bill > available stock return HTTP 400 `INSUFFICIENT_STOCK`
+3. **Stock Audit**: All stock changes generate documents in the `stock_audit` collection
 
 ---
 
@@ -165,25 +223,35 @@ $$\text{Recommended Reorder Qty} = \max\left(0, \text{Predicted 30-Day Demand} +
 
 ### Environment Variables Matrix
 
-| Service | Environment Variable | Default Value | Description |
+| Service | Variable | Default | Description |
 | :--- | :--- | :--- | :--- |
-| **PostgreSQL Database** | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/pharmacy_db` | Database JDBC URL |
-| | `SPRING_DATASOURCE_USERNAME` | `postgres` | Database username |
-| | `SPRING_DATASOURCE_PASSWORD` / `PGPASSWORD` | *(None)* | Database password |
-| **Spring Boot Backend** | `PORT` | `8080` | Backend HTTP server port |
-| | `ML_SERVICE_URL` | `http://localhost:5001/api/predictions` | Microservice URL to Python ML service |
-| **Python ML Module** | `PORT` | `5001` | ML Flask service port |
-| | `PGHOST` / `PGPORT` / `PGDATABASE` | `localhost` / `5432` / `pharmacy_db` | PostgreSQL connection parameters |
-| **React Frontend** | `VITE_API_URL` | `http://localhost:8080` | Production Spring Boot API base URL |
+| **Spring Boot** | `MONGODB_URI` | *(required)* | MongoDB Atlas connection string |
+| | `MONGODB_DATABASE` | `pharmacy_db` | Database name |
+| | `PORT` | `8080` | Backend HTTP port |
+| | `ML_SERVICE_URL` | `http://localhost:5001/api/predictions` | ML microservice URL |
+| **Python ML** | `MONGODB_URI` | *(optional)* | Atlas URI (falls back to historical data if absent) |
+| | `MONGODB_DATABASE` | `pharmacy_db` | Database name |
+| | `PORT` | `5001` | ML Flask port |
+| **React Frontend** | `VITE_API_URL` | `http://localhost:8080` | Spring Boot API base URL |
 
-### Local Development Commands
+### Local Development
+
 ```bash
 # 1. Start Python ML Module
-cd pharmacy-ml && python3 demand_predictor.py
+cd pharmacy-ml && MONGODB_URI="your-uri" python3 demand_predictor.py
 
 # 2. Start Spring Boot Backend
-cd pharmacy-backend && PGPASSWORD=your_db_password mvn spring-boot:run
+cd pharmacy-backend && MONGODB_URI="your-uri" mvn spring-boot:run
 
 # 3. Start React Frontend
 cd pharmacy-frontend && npm run dev
 ```
+
+---
+
+## 🔒 Security Notes
+
+- **No credentials** are committed to Git
+- Use `.env` files locally (excluded by `.gitignore`)
+- Use environment variables or secrets manager in production
+- The browser **never connects directly to MongoDB Atlas** — all database access goes through the Spring Boot REST API

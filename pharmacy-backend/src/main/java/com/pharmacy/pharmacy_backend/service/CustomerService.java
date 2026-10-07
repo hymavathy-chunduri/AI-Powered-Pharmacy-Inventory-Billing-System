@@ -22,7 +22,7 @@ public class CustomerService {
         return customerRepository.findAll();
     }
 
-    public Customer getCustomerById(Long id) {
+    public Customer getCustomerById(String id) {
         return customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with ID: " + id));
     }
@@ -31,7 +31,7 @@ public class CustomerService {
         return customerRepository.save(customer);
     }
 
-    public Customer updateCustomer(Long id, Customer details) {
+    public Customer updateCustomer(String id, Customer details) {
         Customer existing = getCustomerById(id);
         existing.setCustomerName(details.getCustomerName());
         existing.setPhone(details.getPhone());
@@ -39,7 +39,7 @@ public class CustomerService {
         return customerRepository.save(existing);
     }
 
-    public void deleteCustomer(Long id) {
+    public void deleteCustomer(String id) {
         Customer existing = getCustomerById(id);
         customerRepository.delete(existing);
     }

@@ -1,42 +1,49 @@
 package com.pharmacy.pharmacy_backend.entity;
 
-import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
-@Entity
-@Table(name = "customers")
+@Document(collection = "customers")
 public class Customer {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "customer_id")
-    private Long customerId;
+    private String id;
 
     @NotBlank(message = "Customer name is required")
-    @Column(name = "customer_name", nullable = false)
+    @Field("customer_name")
     private String customerName;
 
-    @Column(name = "phone")
+    @Field("phone")
     private String phone;
 
-    @Column(name = "email")
+    @Field("email")
     private String email;
 
     public Customer() {}
 
-    public Customer(Long customerId, String customerName, String phone, String email) {
-        this.customerId = customerId;
+    public Customer(String id, String customerName, String phone, String email) {
+        this.id = id;
         this.customerName = customerName;
         this.phone = phone;
         this.email = email;
     }
 
-    public Long getCustomerId() {
-        return customerId;
+    public String getCustomerId() {
+        return id;
     }
 
-    public void setCustomerId(Long customerId) {
-        this.customerId = customerId;
+    public void setCustomerId(String customerId) {
+        this.id = customerId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getCustomerName() {

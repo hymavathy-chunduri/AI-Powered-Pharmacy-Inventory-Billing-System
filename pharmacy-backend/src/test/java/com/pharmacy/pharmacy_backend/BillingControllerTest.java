@@ -3,8 +3,10 @@ package com.pharmacy.pharmacy_backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pharmacy.pharmacy_backend.dto.BillItemRequestDto;
 import com.pharmacy.pharmacy_backend.dto.BillRequestDto;
+import com.pharmacy.pharmacy_backend.entity.Category;
 import com.pharmacy.pharmacy_backend.entity.Customer;
 import com.pharmacy.pharmacy_backend.entity.Medicine;
+import com.pharmacy.pharmacy_backend.repository.CategoryRepository;
 import com.pharmacy.pharmacy_backend.repository.CustomerRepository;
 import com.pharmacy.pharmacy_backend.repository.MedicineRepository;
 import org.junit.jupiter.api.Test;
@@ -13,8 +15,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -22,7 +24,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 public class BillingControllerTest {
 
     @Autowired
@@ -37,52 +38,63 @@ public class BillingControllerTest {
     @Autowired
     private MedicineRepository medicineRepository;
 
+    @Autowired
+    private CategoryRepository categoryRepository;
+
     @Test
     void testCreateBillSuccess() throws Exception {
-        Customer cust = customerRepository.findAll().stream().findFirst().orElse(null);
-        Medicine med = medicineRepository.findAll().stream()
-                .filter(m -> m.getStockQuantity() != null && m.getStockQuantity() >= 2)
-                .findFirst().orElse(null);
+        Category cat = categoryRepository.save(new Category(null, "BillTestCat " + System.currentTimeMillis(), "desc"));
+        Customer cust = customerRepository.save(new Customer(null, "Bill Test Customer", "1111111111", "billtest@test.com"));
 
-        if (cust != null && med != null) {
-            BillRequestDto req = new BillRequestDto();
-            req.setCustomerId(cust.getCustomerId());
-            req.setPaymentMode("CASH");
+        Medicine med = new Medicine();
+        med.setMedicineName("BillMed " + System.currentTimeMillis());
+        med.setPrice(new BigDecimal("50.00"));
+        med.setStockQuantity(100);
+        med.setCategory(cat);
+        med = medicineRepository.save(med);
 
-            BillItemRequestDto item = new BillItemRequestDto();
-            item.setMedicineId(med.getMedicineId());
-            item.setQuantity(2);
-            req.setItems(List.of(item));
+        BillRequestDto req = new BillRequestDto();
+        req.setCustomerId(cust.getCustomerId());
+        req.setPaymentMode("CASH");
 
-            mockMvc.perform(post("/api/bills")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(req)))
-                    .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.billId").exists())
-                    .andExpect(jsonPath("$.totalAmount").exists());
-        }
+        BillItemRequestDto item = new BillItemRequestDto(med.getMedicineId(), 2);
+        req.setItems(List.of(item));
+
+        mockMvc.perform(post("/api/bills")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.billId").exists())
+                .andExpect(jsonPath("$.totalAmount").exists());
+
+        // Verify stock was reduced (100 - 2 = 98)
+        Medicine updated = medicineRepository.findById(med.getMedicineId()).orElseThrow();
+        assert updated.getStockQuantity() == 98 : "Stock should be 98 after billing 2 units";
     }
 
     @Test
     void testInsufficientStockRejection() throws Exception {
-        Customer cust = customerRepository.findAll().stream().findFirst().orElse(null);
-        Medicine med = medicineRepository.findAll().stream().findFirst().orElse(null);
+        Category cat = categoryRepository.save(new Category(null, "StockTestCat " + System.currentTimeMillis(), "desc"));
+        Customer cust = customerRepository.save(new Customer(null, "Stock Test Customer", "2222222222", "stocktest@test.com"));
 
-        if (cust != null && med != null) {
-            BillRequestDto req = new BillRequestDto();
-            req.setCustomerId(cust.getCustomerId());
-            req.setPaymentMode("UPI");
+        Medicine med = new Medicine();
+        med.setMedicineName("LowStockMed " + System.currentTimeMillis());
+        med.setPrice(new BigDecimal("25.00"));
+        med.setStockQuantity(5);   // only 5 in stock
+        med.setCategory(cat);
+        med = medicineRepository.save(med);
 
-            BillItemRequestDto item = new BillItemRequestDto();
-            item.setMedicineId(med.getMedicineId());
-            item.setQuantity(999999); // Exceeds available stock
-            req.setItems(List.of(item));
+        BillRequestDto req = new BillRequestDto();
+        req.setCustomerId(cust.getCustomerId());
+        req.setPaymentMode("UPI");
 
-            mockMvc.perform(post("/api/bills")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(req)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.errorCode").value("INSUFFICIENT_STOCK"));
-        }
+        BillItemRequestDto item = new BillItemRequestDto(med.getMedicineId(), 999999); // request more than available
+        req.setItems(List.of(item));
+
+        mockMvc.perform(post("/api/bills")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INSUFFICIENT_STOCK"));
     }
 }

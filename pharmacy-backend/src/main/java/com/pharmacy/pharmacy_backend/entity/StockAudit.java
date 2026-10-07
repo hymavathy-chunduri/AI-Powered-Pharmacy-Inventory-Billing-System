@@ -1,41 +1,59 @@
 package com.pharmacy.pharmacy_backend.entity;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "stock_audit")
+/**
+ * StockAudit document — independent collection.
+ * Replaces the PostgreSQL audit_stock_change() trigger.
+ * Written by PurchaseService and BillingService whenever stock changes.
+ */
+@Document(collection = "stock_audit")
 public class StockAudit {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "audit_id")
-    private Long auditId;
+    private String id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "medicine_id", nullable = false)
-    @NotFound(action = NotFoundAction.IGNORE)
+    @DBRef
+    @Field("medicine")
     private Medicine medicine;
 
-    @Column(name = "old_stock")
+    @Field("old_stock")
     private Integer oldStock;
 
-    @Column(name = "new_stock")
+    @Field("new_stock")
     private Integer newStock;
 
-    @Column(name = "changed_at", insertable = false, updatable = false)
+    @Field("changed_at")
     private LocalDateTime changedAt;
 
     public StockAudit() {}
 
-    public Long getAuditId() {
-        return auditId;
+    public StockAudit(Medicine medicine, Integer oldStock, Integer newStock) {
+        this.medicine = medicine;
+        this.oldStock = oldStock;
+        this.newStock = newStock;
+        this.changedAt = LocalDateTime.now();
     }
 
-    public void setAuditId(Long auditId) {
-        this.auditId = auditId;
+    public String getAuditId() {
+        return id;
+    }
+
+    public void setAuditId(String auditId) {
+        this.id = auditId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public Medicine getMedicine() {

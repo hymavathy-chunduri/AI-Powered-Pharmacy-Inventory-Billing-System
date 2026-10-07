@@ -1,9 +1,9 @@
 package com.pharmacy.pharmacy_backend.repository;
 
 import com.pharmacy.pharmacy_backend.entity.Supplier;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface SupplierRepository extends JpaRepository<Supplier, Long> {
+public interface SupplierRepository extends MongoRepository<Supplier, String> {
 }

@@ -8,14 +8,16 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * Uses embedded Flapdoodle MongoDB (no PostgreSQL required).
+ * @Transactional removed — MongoDB doesn't use JPA transactions.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 public class CategoryControllerTest {
 
     @Autowired
@@ -42,6 +44,7 @@ public class CategoryControllerTest {
 
         Category created = objectMapper.readValue(response, Category.class);
 
+        // getCategoryId() returns the String MongoDB ObjectId
         mockMvc.perform(get("/api/categories/" + created.getCategoryId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.categoryName").value(cat.getCategoryName()));

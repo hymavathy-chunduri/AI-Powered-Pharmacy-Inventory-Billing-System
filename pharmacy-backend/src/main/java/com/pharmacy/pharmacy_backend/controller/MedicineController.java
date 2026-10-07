@@ -31,7 +31,7 @@ public class MedicineController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Medicine> getMedicineById(@PathVariable Long id) {
+    public ResponseEntity<Medicine> getMedicineById(@PathVariable String id) {
         return ResponseEntity.ok(medicineService.getMedicineById(id));
     }
 
@@ -42,19 +42,20 @@ public class MedicineController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Medicine> updateMedicine(@PathVariable Long id, @Valid @RequestBody Medicine details) {
+    public ResponseEntity<Medicine> updateMedicine(@PathVariable String id, @Valid @RequestBody Medicine details) {
         Medicine updated = medicineService.updateMedicine(id, details);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteMedicine(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteMedicine(@PathVariable String id) {
         medicineService.deleteMedicine(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/low-stock")
-    public ResponseEntity<List<Medicine>> getLowStock(@RequestParam(required = false, defaultValue = "15") Integer threshold) {
+    public ResponseEntity<List<Medicine>> getLowStock(
+            @RequestParam(required = false, defaultValue = "15") Integer threshold) {
         return ResponseEntity.ok(medicineService.getLowStockMedicines(threshold));
     }
 

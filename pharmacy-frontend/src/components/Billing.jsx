@@ -46,7 +46,7 @@ export default function Billing() {
       return;
     }
 
-    const med = medicines.find(m => m.medicineId === parseInt(selectedMedId));
+    const med = medicines.find(m => String(m.medicineId) === String(selectedMedId));
     if (!med) return;
 
     if (quantity > med.stockQuantity) {
@@ -57,7 +57,7 @@ export default function Billing() {
       return;
     }
 
-    const existingIdx = cart.findIndex(item => item.medicineId === med.medicineId);
+    const existingIdx = cart.findIndex(item => String(item.medicineId) === String(med.medicineId));
     if (existingIdx >= 0) {
       const updatedCart = [...cart];
       const newQty = updatedCart[existingIdx].quantity + parseInt(quantity);
@@ -109,7 +109,7 @@ export default function Billing() {
     }
 
     const payload = {
-      customerId: parseInt(selectedCustomer),
+      customerId: selectedCustomer,
       paymentMode: paymentMode,
       items: cart.map(item => ({
         medicineId: item.medicineId,
@@ -142,7 +142,7 @@ export default function Billing() {
     }
   };
 
-  const selectedMed = medicines.find(m => m.medicineId === parseInt(selectedMedId));
+  const selectedMed = medicines.find(m => String(m.medicineId) === String(selectedMedId));
 
   return (
     <div>

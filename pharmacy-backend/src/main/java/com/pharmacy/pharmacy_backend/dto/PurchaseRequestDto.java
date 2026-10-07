@@ -2,13 +2,13 @@ package com.pharmacy.pharmacy_backend.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 
 public class PurchaseRequestDto {
 
-    @NotNull(message = "Supplier ID is required")
-    private Long supplierId;
+    @NotBlank(message = "Supplier ID is required")
+    private String supplierId;
 
     @NotEmpty(message = "Purchase must contain at least one item")
     @Valid
@@ -16,11 +16,11 @@ public class PurchaseRequestDto {
 
     public PurchaseRequestDto() {}
 
-    public Long getSupplierId() {
+    public String getSupplierId() {
         return supplierId;
     }
 
-    public void setSupplierId(Long supplierId) {
+    public void setSupplierId(String supplierId) {
         this.supplierId = supplierId;
     }
 

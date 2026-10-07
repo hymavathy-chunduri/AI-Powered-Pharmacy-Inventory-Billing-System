@@ -1,48 +1,56 @@
 package com.pharmacy.pharmacy_backend.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "users")
+@Document(collection = "users")
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
-    private Long userId;
+    private String id;
 
-    @Column(name = "username", nullable = false, unique = true)
+    @Field("username")
     private String username;
 
-    @Column(name = "password", nullable = false)
+    @Field("password")
     private String password;
 
-    @Column(name = "full_name")
+    @Field("full_name")
     private String fullName;
 
-    @Column(name = "role")
+    @Field("role")
     private String role;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @Field("created_at")
     private LocalDateTime createdAt;
 
     public User() {}
 
-    public User(Long userId, String username, String password, String fullName, String role) {
-        this.userId = userId;
+    public User(String id, String username, String password, String fullName, String role) {
+        this.id = id;
         this.username = username;
         this.password = password;
         this.fullName = fullName;
         this.role = role;
     }
 
-    public Long getUserId() {
-        return userId;
+    public String getUserId() {
+        return id;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setUserId(String userId) {
+        this.id = userId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getUsername() {

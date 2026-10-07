@@ -1,38 +1,48 @@
 package com.pharmacy.pharmacy_backend.entity;
 
-import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
-@Entity
-@Table(name = "categories")
+@Document(collection = "categories")
 public class Category {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "category_id")
-    private Long categoryId;
+    private String id;
 
     @NotBlank(message = "Category name is required")
-    @Column(name = "category_name", nullable = false, unique = true)
+    @Indexed(unique = true)
+    @Field("category_name")
     private String categoryName;
 
-    @Column(name = "description")
+    @Field("description")
     private String description;
 
     public Category() {}
 
-    public Category(Long categoryId, String categoryName, String description) {
-        this.categoryId = categoryId;
+    public Category(String id, String categoryName, String description) {
+        this.id = id;
         this.categoryName = categoryName;
         this.description = description;
     }
 
-    public Long getCategoryId() {
-        return categoryId;
+    // Keep old getter name for frontend compatibility
+    public String getCategoryId() {
+        return id;
     }
 
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
+    public void setCategoryId(String categoryId) {
+        this.id = categoryId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getCategoryName() {

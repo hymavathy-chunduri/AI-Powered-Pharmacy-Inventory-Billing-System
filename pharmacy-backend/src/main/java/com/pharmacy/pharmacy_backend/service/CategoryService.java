@@ -22,7 +22,7 @@ public class CategoryService {
         return categoryRepository.findAll();
     }
 
-    public Category getCategoryById(Long id) {
+    public Category getCategoryById(String id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
     }
@@ -31,14 +31,14 @@ public class CategoryService {
         return categoryRepository.save(category);
     }
 
-    public Category updateCategory(Long id, Category details) {
+    public Category updateCategory(String id, Category details) {
         Category existing = getCategoryById(id);
         existing.setCategoryName(details.getCategoryName());
         existing.setDescription(details.getDescription());
         return categoryRepository.save(existing);
     }
 
-    public void deleteCategory(Long id) {
+    public void deleteCategory(String id) {
         Category existing = getCategoryById(id);
         categoryRepository.delete(existing);
     }

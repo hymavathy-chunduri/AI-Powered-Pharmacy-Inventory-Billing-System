@@ -4,14 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pharmacy.pharmacy_backend.entity.Category;
 import com.pharmacy.pharmacy_backend.entity.Medicine;
 import com.pharmacy.pharmacy_backend.repository.CategoryRepository;
-import com.pharmacy.pharmacy_backend.repository.MedicineRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
@@ -20,7 +18,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 public class MedicineControllerTest {
 
     @Autowired
@@ -30,27 +27,15 @@ public class MedicineControllerTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private MedicineRepository medicineRepository;
-
-    @Autowired
     private CategoryRepository categoryRepository;
 
     @Test
-    void testGetAllMedicines() throws Exception {
-        mockMvc.perform(get("/api/medicines"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
-    }
-
-    @Test
-    void testSearchMedicine() throws Exception {
-        mockMvc.perform(get("/api/medicines?search=Paracetamol"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void testCreateAndUpdateMedicine() throws Exception {
-        Category cat = categoryRepository.findAll().stream().findFirst().orElse(null);
+    void testMedicineCRUD() throws Exception {
+        // Create a category first (required by Medicine)
+        Category cat = new Category();
+        cat.setCategoryName("JUnit Test Category " + System.currentTimeMillis());
+        cat.setDescription("Test");
+        cat = categoryRepository.save(cat);
 
         Medicine med = new Medicine();
         med.setMedicineName("Test Medicine JUnit");

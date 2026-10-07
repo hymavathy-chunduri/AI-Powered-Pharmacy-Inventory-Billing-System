@@ -1,57 +1,46 @@
 package com.pharmacy.pharmacy_backend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.math.BigDecimal;
 
-@Entity
-@Table(name = "purchase_items")
+/**
+ * PurchaseItem is embedded inside Purchase document.
+ * No @Document annotation — it is NOT a top-level collection.
+ */
 public class PurchaseItem {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "purchase_item_id")
-    private Long purchaseItemId;
+    @Field("medicine_id")
+    private String medicineId;
 
-    @ManyToOne
-    @JoinColumn(name = "purchase_id", nullable = false)
-    @JsonIgnore
-    private Purchase purchase;
+    @Field("medicine_name")
+    private String medicineName;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "medicine_id", nullable = false)
-    private Medicine medicine;
-
-    @Column(name = "quantity", nullable = false)
+    @Field("quantity")
     private Integer quantity;
 
-    @Column(name = "purchase_price", nullable = false, precision = 10, scale = 2)
+    @Field("unit_price")
     private BigDecimal unitPrice;
+
+    @Field("subtotal")
+    private BigDecimal subtotal;
 
     public PurchaseItem() {}
 
-    public Long getPurchaseItemId() {
-        return purchaseItemId;
+    public String getMedicineId() {
+        return medicineId;
     }
 
-    public void setPurchaseItemId(Long purchaseItemId) {
-        this.purchaseItemId = purchaseItemId;
+    public void setMedicineId(String medicineId) {
+        this.medicineId = medicineId;
     }
 
-    public Purchase getPurchase() {
-        return purchase;
+    public String getMedicineName() {
+        return medicineName;
     }
 
-    public void setPurchase(Purchase purchase) {
-        this.purchase = purchase;
-    }
-
-    public Medicine getMedicine() {
-        return medicine;
-    }
-
-    public void setMedicine(Medicine medicine) {
-        this.medicine = medicine;
+    public void setMedicineName(String medicineName) {
+        this.medicineName = medicineName;
     }
 
     public Integer getQuantity() {
@@ -68,5 +57,13 @@ public class PurchaseItem {
 
     public void setUnitPrice(BigDecimal unitPrice) {
         this.unitPrice = unitPrice;
+    }
+
+    public BigDecimal getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(BigDecimal subtotal) {
+        this.subtotal = subtotal;
     }
 }

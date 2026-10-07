@@ -1,66 +1,162 @@
-# 📚 College Final Review Project Report
-## Pharmacy Inventory & Billing System with AI Demand Prediction
+# Project Documentation — AI-Powered Pharmacy Inventory & Billing System
 
-**Degree:** B.Tech Computer Science & Engineering  
-**System Type:** Full-Stack Academic Project (DBMS + Spring Boot + React + Machine Learning)
+## Overview
 
----
-
-## 1. Project Overview & Motivation
-Pharmacies handle thousands of prescription items requiring strict inventory tracking, expiry monitoring, accurate customer billing, and stock reordering. Manual tracking leads to stock-outs of vital medicines or wastage from expired stock.
-
-This project delivers a complete enterprise solution:
-1. **Relational Database Engine (PostgreSQL)**: Handles ACID transactions, stock enforcement, and automatic audit logging via triggers.
-2. **REST API Micro-service (Spring Boot)**: Encapsulates domain logic, validation, and REST API controllers.
-3. **POS Dashboard (React + Vite)**: Provides an interactive UI for billing, stock management, and reporting.
-4. **Demand Prediction Engine (Scikit-Learn Python)**: Uses historical sales data to predict 30-day demand and advise reorders.
+This system is a full-stack pharmacy management solution built for B.Tech CSE Final Year, featuring:
+- MongoDB Atlas cloud database (NoSQL)
+- Spring Boot REST API backend
+- React.js frontend (POS-style UI)
+- Python Flask ML service for demand prediction
 
 ---
 
-## 2. Database Design & Integrity Constraints
+## Architecture
 
-### 2.1 Entity Relationship Diagram (Summary)
-* **Categories (1:N)** -> Medicines
-* **Suppliers (1:N)** -> Purchases (1:N) -> Purchase Items -> Medicines
-* **Customers (1:N)** -> Bills (1:N) -> Bill Items -> Medicines
-* **Medicines (1:N)** -> Stock Audit
-
-### 2.2 Integrity Constraints Enforced
-* `price > 0`
-* `stock_quantity >= 0`
-* `quantity > 0`
-* Foreign Key Cascades & Foreign Key Checks
-
-### 2.3 PL/pgSQL Triggers
-* **`trg_reduce_stock`**: Fires `AFTER INSERT ON bill_items`. Executes `reduce_stock()`, verifies available stock, decrements `stock_quantity`, and records audit row.
-* **`trg_increase_stock`**: Fires `AFTER INSERT ON purchase_items`. Executes `increase_stock()`, increments `stock_quantity`, and records audit row.
-
----
-
-## 3. Backend & API Design
-Built with **Spring Boot 3.2.4**, implementing a clean 4-tier architecture:
-* **Controller Layer**: Exposes REST endpoints (`/api/medicines`, `/api/bills`, `/api/purchases`, `/api/reports`, `/api/predictions`).
-* **Service Layer**: Business validation (`InsufficientStockException`), transaction management (`@Transactional`).
-* **Repository Layer**: Spring Data JPA interfaces.
-* **Database Layer**: PostgreSQL `pharmacy_db`.
+```
+Browser (React UI)
+        │
+        │ HTTP REST API
+        ▼
+Spring Boot Backend (Java 17)
+        │
+        │ Spring Data MongoDB
+        ▼
+MongoDB Atlas (Cloud NoSQL)
+        │
+        │ PyMongo (aggregation pipeline)
+        ▼
+Python ML Module (Flask)
+        │
+        ▼
+Demand Prediction + Reorder Recommendations
+```
 
 ---
 
-## 4. Machine Learning & Predictive Analytics
+## Database: MongoDB Atlas
 
-### 4.1 Data Pipeline & Feature Selection
-Historical sales data extracted from `bills` and `bill_items`.  
-Features: `medicine_id`, `day_of_week`, `day_of_month`, `month`.
+### Collections
 
-### 4.2 Model Performance Comparison
-Both **Linear Regression** and **Random Forest Regressor** were evaluated on 80/20 train/test splits:
-* **Random Forest Regressor** outperformed Linear Regression in capturing non-linear sales spikes and weekly purchasing cycles.
+| Collection   | Type             | Key Fields |
+|--------------|------------------|------------|
+| categories   | Independent      | category_name, description |
+| suppliers    | Independent      | supplier_name, phone, email, address |
+| medicines    | Independent + DBRef | medicine_name, category (→categories), price, stock_quantity, expiry_date |
+| customers    | Independent      | customer_name, phone, email |
+| purchases    | Parent + Embedded | supplier (→suppliers), purchase_date, total_amount, items[] |
+| bills        | Parent + Embedded | customer (→customers), bill_date, total_amount, items[] |
+| stock_audit  | Independent      | medicine (→medicines), old_stock, new_stock, changed_at |
+| users        | Independent      | username, password, full_name, role |
 
-### 4.3 Reorder Decision Rule
-$$\text{Reorder Quantity} = \max\left(0, \text{Predicted Demand}_{30\text{d}} + 15 - \text{Current Stock}\right)$$
+### Embedded Documents
+
+**Purchase.items[]**
+```json
+{
+  "medicine_id": "ObjectId",
+  "medicine_name": "Paracetamol 500mg",
+  "quantity": 100,
+  "unit_price": 5.50,
+  "subtotal": 550.00
+}
+```
+
+**Bill.items[]**
+```json
+{
+  "medicine_id": "ObjectId",
+  "medicine_name": "Paracetamol 500mg",
+  "quantity": 2,
+  "unit_price": 5.50,
+  "subtotal": 11.00
+}
+```
 
 ---
 
-## 5. System Limitations & Future Scope
-* **Limitations**: Current historical dataset length in initial setup requires enrichment for multi-year seasonal forecasting.
-* **Future Scope**: Integration with barcode scanners, multi-branch pharmacy support, and WhatsApp invoice delivery.
+## Business Logic (Service Layer)
+
+All business logic that was previously implemented as PostgreSQL PL/pgSQL triggers is now implemented in the Spring Boot service layer.
+
+### Purchase Flow
+1. Validate supplier exists
+2. For each item: validate medicine exists
+3. Build Purchase with embedded PurchaseItem array
+4. **Increase** `medicine.stock_quantity` by purchased quantity
+5. Create `StockAudit` document (old_stock → new_stock)
+6. Calculate `purchase.total_amount`
+7. Save Purchase to MongoDB
+
+### Billing Flow
+1. Validate customer exists
+2. **Pre-validate ALL items** for sufficient stock (fail-fast — no partial updates)
+3. For each item: build BillItem with denormalized medicine name + current price
+4. **Decrease** `medicine.stock_quantity` by billed quantity
+5. Create `StockAudit` document (old_stock → new_stock)
+6. Calculate `bill.total_amount`
+7. Save Bill to MongoDB
+
+### Insufficient Stock → HTTP 400
+```json
+{
+  "errorCode": "INSUFFICIENT_STOCK",
+  "message": "Insufficient stock for 'Paracetamol 500mg'. Available: 5, Requested: 10"
+}
+```
+
+---
+
+## REST API Summary
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/categories | List categories |
+| POST | /api/categories | Create category |
+| PUT | /api/categories/{id} | Update category |
+| DELETE | /api/categories/{id} | Delete category |
+| GET | /api/suppliers | List suppliers |
+| POST | /api/suppliers | Create supplier |
+| PUT | /api/suppliers/{id} | Update supplier |
+| DELETE | /api/suppliers/{id} | Delete supplier |
+| GET | /api/medicines | List or search medicines |
+| POST | /api/medicines | Create medicine |
+| PUT | /api/medicines/{id} | Update medicine |
+| DELETE | /api/medicines/{id} | Delete medicine |
+| GET | /api/medicines/low-stock | Low-stock alert (stock ≤ 15) |
+| GET | /api/medicines/expiry-alerts | Expiring within 30 days |
+| GET | /api/customers | List customers |
+| POST | /api/customers | Create customer |
+| PUT | /api/customers/{id} | Update customer |
+| DELETE | /api/customers/{id} | Delete customer |
+| GET | /api/purchases | List purchases |
+| POST | /api/purchases | Create purchase (increases stock) |
+| GET | /api/bills | List bills |
+| POST | /api/bills | Create bill (validates + decreases stock) |
+| GET | /api/reports/inventory | Inventory report |
+| GET | /api/reports/sales | Sales report |
+| GET | /api/reports/audit | Stock audit log |
+| GET | /api/predictions | ML demand predictions |
+
+---
+
+## ML Module
+
+The Python Flask service (`pharmacy-ml/demand_predictor.py`):
+- Reads bill data from MongoDB Atlas via PyMongo aggregation pipeline
+- Trains Linear Regression + Random Forest Regressor models
+- Selects the best model by R² score
+- Returns 30-day demand predictions per medicine
+- Calculates recommended reorder quantity
+- Falls back to a 1,440-sample historical dataset when MongoDB is unavailable
+
+---
+
+## Environment Variables
+
+| Variable | Service | Description |
+|----------|---------|-------------|
+| `MONGODB_URI` | Backend + ML | MongoDB Atlas connection string |
+| `MONGODB_DATABASE` | Backend + ML | Database name (default: pharmacy_db) |
+| `PORT` | Backend / ML | HTTP server port |
+| `ML_SERVICE_URL` | Backend | URL of ML Flask service |
+| `VITE_API_URL` | Frontend | Spring Boot API base URL |

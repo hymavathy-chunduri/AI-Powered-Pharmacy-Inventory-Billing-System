@@ -23,52 +23,49 @@ public class MedicineService {
         return medicineRepository.findAll();
     }
 
-    public Medicine getMedicineById(Long id) {
+    public Medicine getMedicineById(String id) {
         return medicineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with ID: " + id));
     }
 
-    public List<Medicine> searchMedicines(String query) {
-        if (query == null || query.trim().isEmpty()) {
-            return getAllMedicines();
-        }
-        return medicineRepository.findByMedicineNameContainingIgnoreCase(query.trim());
+    public List<Medicine> searchMedicines(String name) {
+        return medicineRepository.findByMedicineNameContainingIgnoreCase(name);
     }
 
     public Medicine createMedicine(Medicine medicine) {
         return medicineRepository.save(medicine);
     }
 
-    public Medicine updateMedicine(Long id, Medicine details) {
+    public Medicine updateMedicine(String id, Medicine details) {
         Medicine existing = getMedicineById(id);
         existing.setMedicineName(details.getMedicineName());
         existing.setCategory(details.getCategory());
-        if (details.getPrice() != null) existing.setPrice(details.getPrice());
-        if (details.getStockQuantity() != null) existing.setStockQuantity(details.getStockQuantity());
-        if (details.getManufactureDate() != null) existing.setManufactureDate(details.getManufactureDate());
-        if (details.getExpiryDate() != null) existing.setExpiryDate(details.getExpiryDate());
+        existing.setPrice(details.getPrice());
+        existing.setStockQuantity(details.getStockQuantity());
+        existing.setManufactureDate(details.getManufactureDate());
+        existing.setExpiryDate(details.getExpiryDate());
         return medicineRepository.save(existing);
     }
 
-    public void deleteMedicine(Long id) {
+    public void deleteMedicine(String id) {
         Medicine existing = getMedicineById(id);
         medicineRepository.delete(existing);
     }
 
+    /**
+     * Replaces the PostgreSQL low_stock_view.
+     * Returns medicines where stock_quantity <= threshold (default 15).
+     */
     public List<Medicine> getLowStockMedicines(Integer threshold) {
         int limit = (threshold != null) ? threshold : 15;
-        try {
-            List<Medicine> viewResult = medicineRepository.findLowStockFromView();
-            if (!viewResult.isEmpty()) return viewResult;
-        } catch (Exception ignored) {}
         return medicineRepository.findByStockQuantityLessThanEqual(limit);
     }
 
+    /**
+     * Replaces the PostgreSQL expiry_alert_view.
+     * Returns medicines expiring within the next 30 days.
+     */
     public List<Medicine> getExpiryAlerts() {
-        try {
-            List<Medicine> viewResult = medicineRepository.findExpiryAlertsFromView();
-            if (!viewResult.isEmpty()) return viewResult;
-        } catch (Exception ignored) {}
         LocalDate cutoff = LocalDate.now().plusDays(30);
         return medicineRepository.findByExpiryDateBefore(cutoff);
     }

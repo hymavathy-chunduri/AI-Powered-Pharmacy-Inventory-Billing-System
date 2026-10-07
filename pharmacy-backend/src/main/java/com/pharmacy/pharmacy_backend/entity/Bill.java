@@ -1,44 +1,55 @@
 package com.pharmacy.pharmacy_backend.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "bills")
+/**
+ * Bill document — contains embedded BillItem array.
+ * Customer is a DBRef (independent collection).
+ * Business logic (stock check, reduce, audit) is handled in BillingService.
+ */
+@Document(collection = "bills")
 public class Bill {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "bill_id")
-    private Long billId;
+    private String id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @DBRef
+    @Field("customer")
     private Customer customer;
 
-    @Column(name = "bill_date", nullable = false)
+    @Field("bill_date")
     private LocalDateTime billDate;
 
-    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
+    @Field("total_amount")
     private BigDecimal totalAmount;
 
-    @OneToMany(mappedBy = "bill", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Field("items")
     private List<BillItem> items = new ArrayList<>();
 
-    public Bill() {
-        this.billDate = LocalDateTime.now();
-        this.totalAmount = BigDecimal.ZERO;
+    public Bill() {}
+
+    public String getBillId() {
+        return id;
     }
 
-    public Long getBillId() {
-        return billId;
+    public void setBillId(String billId) {
+        this.id = billId;
     }
 
-    public void setBillId(Long billId) {
-        this.billId = billId;
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public Customer getCustomer() {
@@ -75,6 +86,5 @@ public class Bill {
 
     public void addItem(BillItem item) {
         items.add(item);
-        item.setBill(this);
     }
 }

@@ -73,7 +73,7 @@ export default function Medicines() {
 
     const payload = {
       medicineName: formData.medicineName,
-      category: { categoryId: parseInt(formData.categoryId) },
+      category: { categoryId: formData.categoryId },
       price: parseFloat(formData.price),
       stockQuantity: parseInt(formData.stockQuantity),
       expiryDate: formData.expiryDate || null

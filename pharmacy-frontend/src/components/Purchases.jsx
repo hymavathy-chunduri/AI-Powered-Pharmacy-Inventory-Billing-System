@@ -48,10 +48,10 @@ export default function Purchases() {
     }
 
     const payload = {
-      supplierId: parseInt(selectedSupplier),
+      supplierId: selectedSupplier,
       items: [
         {
-          medicineId: parseInt(selectedMedId),
+          medicineId: selectedMedId,
           quantity: parseInt(quantity),
           unitPrice: parseFloat(unitPrice)
         }
@@ -118,7 +118,7 @@ export default function Purchases() {
                 value={selectedMedId}
                 onChange={e => {
                   setSelectedMedId(e.target.value);
-                  const m = medicines.find(med => med.medicineId === parseInt(e.target.value));
+                  const m = medicines.find(med => String(med.medicineId) === String(e.target.value));
                   if (m) setUnitPrice(m.purchasePrice || m.price);
                 }}
               >

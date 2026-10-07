@@ -1,12 +1,13 @@
 package com.pharmacy.pharmacy_backend.dto;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class BillItemRequestDto {
 
-    @NotNull(message = "Medicine ID is required")
-    private Long medicineId;
+    @NotBlank(message = "Medicine ID is required")
+    private String medicineId;
 
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be at least 1")
@@ -14,16 +15,16 @@ public class BillItemRequestDto {
 
     public BillItemRequestDto() {}
 
-    public BillItemRequestDto(Long medicineId, Integer quantity) {
+    public BillItemRequestDto(String medicineId, Integer quantity) {
         this.medicineId = medicineId;
         this.quantity = quantity;
     }
 
-    public Long getMedicineId() {
+    public String getMedicineId() {
         return medicineId;
     }
 
-    public void setMedicineId(Long medicineId) {
+    public void setMedicineId(String medicineId) {
         this.medicineId = medicineId;
     }
 

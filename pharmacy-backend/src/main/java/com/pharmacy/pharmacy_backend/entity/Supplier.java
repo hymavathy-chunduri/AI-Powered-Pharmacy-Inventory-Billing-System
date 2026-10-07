@@ -1,46 +1,53 @@
 package com.pharmacy.pharmacy_backend.entity;
 
-import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
-@Entity
-@Table(name = "suppliers")
+@Document(collection = "suppliers")
 public class Supplier {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "supplier_id")
-    private Long supplierId;
+    private String id;
 
     @NotBlank(message = "Supplier name is required")
-    @Column(name = "supplier_name", nullable = false)
+    @Field("supplier_name")
     private String supplierName;
 
-    @Column(name = "phone")
+    @Field("phone")
     private String phone;
 
-    @Column(name = "email")
+    @Field("email")
     private String email;
 
-    @Column(name = "address")
+    @Field("address")
     private String address;
 
     public Supplier() {}
 
-    public Supplier(Long supplierId, String supplierName, String phone, String email, String address) {
-        this.supplierId = supplierId;
+    public Supplier(String id, String supplierName, String phone, String email, String address) {
+        this.id = id;
         this.supplierName = supplierName;
         this.phone = phone;
         this.email = email;
         this.address = address;
     }
 
-    public Long getSupplierId() {
-        return supplierId;
+    public String getSupplierId() {
+        return id;
     }
 
-    public void setSupplierId(Long supplierId) {
-        this.supplierId = supplierId;
+    public void setSupplierId(String supplierId) {
+        this.id = supplierId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getSupplierName() {

@@ -29,7 +29,7 @@ public class BillingController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Bill> getBillById(@PathVariable Long id) {
+    public ResponseEntity<Bill> getBillById(@PathVariable String id) {
         return ResponseEntity.ok(billingService.getBillById(id));
     }
 

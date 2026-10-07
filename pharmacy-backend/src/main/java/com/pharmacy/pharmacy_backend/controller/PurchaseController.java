@@ -29,7 +29,7 @@ public class PurchaseController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Purchase> getPurchaseById(@PathVariable Long id) {
+    public ResponseEntity<Purchase> getPurchaseById(@PathVariable String id) {
         return ResponseEntity.ok(purchaseService.getPurchaseById(id));
     }
 

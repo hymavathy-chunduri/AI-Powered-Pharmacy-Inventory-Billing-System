@@ -22,7 +22,7 @@ public class SupplierService {
         return supplierRepository.findAll();
     }
 
-    public Supplier getSupplierById(Long id) {
+    public Supplier getSupplierById(String id) {
         return supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with ID: " + id));
     }
@@ -31,7 +31,7 @@ public class SupplierService {
         return supplierRepository.save(supplier);
     }
 
-    public Supplier updateSupplier(Long id, Supplier details) {
+    public Supplier updateSupplier(String id, Supplier details) {
         Supplier existing = getSupplierById(id);
         existing.setSupplierName(details.getSupplierName());
         existing.setPhone(details.getPhone());
@@ -40,7 +40,7 @@ public class SupplierService {
         return supplierRepository.save(existing);
     }
 
-    public void deleteSupplier(Long id) {
+    public void deleteSupplier(String id) {
         Supplier existing = getSupplierById(id);
         supplierRepository.delete(existing);
     }
