@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  // Base path for GitHub Pages: https://hymavathy-chunduri.github.io/AI-Powered-Pharmacy-Inventory-Billing-System/
+  base: '/AI-Powered-Pharmacy-Inventory-Billing-System/',
   plugins: [react()],
   server: {
     port: 3000,
