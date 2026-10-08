@@ -1,18 +1,16 @@
 package com.pharmacy.pharmacy_backend.service;
 
-import com.pharmacy.pharmacy_backend.entity.Bill;
-import com.pharmacy.pharmacy_backend.entity.BillItem;
 import com.pharmacy.pharmacy_backend.entity.Medicine;
 import com.pharmacy.pharmacy_backend.entity.StockAudit;
 import com.pharmacy.pharmacy_backend.repository.BillRepository;
 import com.pharmacy.pharmacy_backend.repository.MedicineRepository;
 import com.pharmacy.pharmacy_backend.repository.StockAuditRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * ReportService — replaces the following PostgreSQL views:
@@ -27,14 +25,17 @@ public class ReportService {
     private final MedicineRepository medicineRepository;
     private final BillRepository billRepository;
     private final StockAuditRepository stockAuditRepository;
+    private final MongoTemplate mongoTemplate;
 
     @Autowired
     public ReportService(MedicineRepository medicineRepository,
                          BillRepository billRepository,
-                         StockAuditRepository stockAuditRepository) {
+                         StockAuditRepository stockAuditRepository,
+                         MongoTemplate mongoTemplate) {
         this.medicineRepository = medicineRepository;
         this.billRepository = billRepository;
         this.stockAuditRepository = stockAuditRepository;
+        this.mongoTemplate = mongoTemplate;
     }
 
     /**
@@ -59,39 +60,43 @@ public class ReportService {
 
     /**
      * Replaces the PostgreSQL sales_report view.
-     * Builds aggregated sales data from bill documents (embedded bill items).
+     * Uses MongoDB server-side aggregation ($unwind + $group) — avoids loading all bills into memory
+     * and eliminates N+1 customer DBRef resolution overhead on Atlas M0.
      */
     public List<Map<String, Object>> getSalesReport() {
-        List<Bill> bills = billRepository.findAll();
+        org.bson.Document unwindStage = new org.bson.Document("$unwind", "$items");
+        org.bson.Document groupStage = new org.bson.Document("$group", new org.bson.Document()
+                .append("_id", "$items.medicine_id")
+                .append("medicine_name", new org.bson.Document("$first", "$items.medicine_name"))
+                .append("total_quantity_sold", new org.bson.Document("$sum", "$items.quantity"))
+                .append("total_revenue", new org.bson.Document("$sum", "$items.subtotal"))
+        );
+        org.bson.Document sortStage = new org.bson.Document("$sort",
+                new org.bson.Document("total_revenue", -1));
 
-        // Aggregate sales by medicine across all bills
-        Map<String, Map<String, Object>> salesByMedicine = new LinkedHashMap<>();
+        List<org.bson.Document> pipeline = Arrays.asList(unwindStage, groupStage, sortStage);
 
-        for (Bill bill : bills) {
-            if (bill.getItems() == null) continue;
-            for (BillItem item : bill.getItems()) {
-                String medId = item.getMedicineId();
-                if (medId == null) continue;
+        List<org.bson.Document> raw = new ArrayList<>();
+        mongoTemplate.getDb().getCollection("bills").aggregate(pipeline).into(raw);
 
-                salesByMedicine.computeIfAbsent(medId, k -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("medicine_id", medId);
-                    row.put("medicine_name", item.getMedicineName());
-                    row.put("total_quantity_sold", 0);
-                    row.put("total_revenue", BigDecimal.ZERO);
-                    return row;
-                });
-
-                Map<String, Object> row = salesByMedicine.get(medId);
-                int currentQty = (int) row.get("total_quantity_sold");
-                BigDecimal currentRev = (BigDecimal) row.get("total_revenue");
-                row.put("total_quantity_sold", currentQty + item.getQuantity());
-                row.put("total_revenue", currentRev.add(
-                        item.getSubtotal() != null ? item.getSubtotal() : BigDecimal.ZERO));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (org.bson.Document doc : raw) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("medicine_id", doc.getString("_id"));
+            row.put("medicine_name", doc.getString("medicine_name"));
+            row.put("total_quantity_sold", doc.getInteger("total_quantity_sold", 0));
+            // Handle both Double and Decimal128 from MongoDB
+            Object rev = doc.get("total_revenue");
+            if (rev instanceof org.bson.types.Decimal128) {
+                row.put("total_revenue", ((org.bson.types.Decimal128) rev).bigDecimalValue());
+            } else if (rev instanceof Double) {
+                row.put("total_revenue", BigDecimal.valueOf((Double) rev));
+            } else {
+                row.put("total_revenue", BigDecimal.ZERO);
             }
+            result.add(row);
         }
-
-        return new ArrayList<>(salesByMedicine.values());
+        return result;
     }
 
     /**

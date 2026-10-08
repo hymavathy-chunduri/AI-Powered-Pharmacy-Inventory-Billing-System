@@ -120,8 +120,9 @@ def train_and_evaluate():
     df["day_of_month"] = df["bill_date"].dt.day
     df["month"] = df["bill_date"].dt.month
 
-    # Feature Engineering
-    features = ["medicine_id", "day_of_week", "day_of_month", "month"]
+    # Feature Engineering — encode medicine_id as int category (works for both ObjectId strings and ints)
+    df["medicine_id_enc"] = pd.Categorical(df["medicine_id"].astype(str)).codes
+    features = ["medicine_id_enc", "day_of_week", "day_of_month", "month"]
     X = df[features]
     y = df["quantity"]
 
@@ -157,12 +158,13 @@ def train_and_evaluate():
         med_name   = group["medicine_name"].iloc[0]
         curr_stock = int(group["current_stock"].iloc[0])
 
+        med_enc = int(pd.Categorical([str(med_id)], categories=df["medicine_id"].astype(str).unique()).codes[0])
         future_days = []
         now = datetime.datetime.now()
         for i in range(30):
             f_date = now + datetime.timedelta(days=i)
             future_days.append({
-                "medicine_id": med_id,
+                "medicine_id_enc": med_enc,
                 "day_of_week": f_date.weekday(),
                 "day_of_month": f_date.day,
                 "month": f_date.month,
@@ -215,8 +217,13 @@ def index():
 
 @app.route("/api/predictions", methods=["GET"])
 def get_predictions():
-    metrics, predictions = train_and_evaluate()
-    return jsonify({"metrics": metrics, "predictions": predictions})
+    try:
+        metrics, predictions = train_and_evaluate()
+        return jsonify({"metrics": metrics, "predictions": predictions})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e), "status": "ML_ERROR"}), 500
 
 
 @app.route("/api/predictions/<medicine_id>", methods=["GET"])
@@ -229,7 +236,12 @@ def get_prediction_by_id(medicine_id):
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5001))
+    # ML_PORT takes priority; fallback to PORT env var; default 5001
+    # This prevents conflict when Spring Boot uses PORT=8080
+    port = int(os.getenv("ML_PORT", os.getenv("PORT", 5001)))
+    # If PORT is set to 8080 (Spring Boot's port), override to 5001
+    if port == 8080:
+        port = 5001
     print(f"Starting ML Prediction Service on port {port}...")
     print(f"MongoDB URI configured: {'Yes' if MONGODB_URI else 'No (will use HISTORICAL_ENRICHED fallback)'}")
     app.run(host="0.0.0.0", port=port, debug=False)

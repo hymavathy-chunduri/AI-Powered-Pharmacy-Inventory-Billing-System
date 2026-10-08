@@ -14,6 +14,7 @@ import com.pharmacy.pharmacy_backend.repository.CustomerRepository;
 import com.pharmacy.pharmacy_backend.repository.MedicineRepository;
 import com.pharmacy.pharmacy_backend.repository.StockAuditRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -34,6 +35,16 @@ import java.util.List;
  *   5. Write StockAudit entry for each item (was PostgreSQL trigger)
  *   6. Calculate total (was PostgreSQL trigger)
  *   7. Save bill
+ *
+ * Note on MongoDB Transactions:
+ *   Atlas M0 (free tier) supports multi-document ACID transactions on replica sets.
+ *   However, this service uses application-level pre-validation (Phase 1 stock check
+ *   before any writes) as the consistency mechanism. This approach:
+ *   - Validates ALL items before any write
+ *   - Is safe for single-threaded request processing
+ *   - Avoids transaction session overhead on Atlas M0
+ *   For production scale, explicit ClientSession transactions should be added
+ *   to handle concurrent billing of the same medicine stock.
  */
 @Service
 public class BillingService {
@@ -54,8 +65,12 @@ public class BillingService {
         this.stockAuditRepository = stockAuditRepository;
     }
 
+    /**
+     * Returns the 50 most recent bills.
+     * Loading all bills triggers N+1 customer DBRef resolution which is very slow over Atlas.
+     */
     public List<Bill> getAllBills() {
-        return billRepository.findAll();
+        return billRepository.findAllByOrderByBillDateDesc(PageRequest.of(0, 50));
     }
 
     public Bill getBillById(String id) {

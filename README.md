@@ -135,7 +135,8 @@ MONGODB_URI="your-connection-string" python3 seed_mongodb.py
 ```bash
 cd pharmacy-ml
 pip install -r requirements.txt
-MONGODB_URI="your-connection-string" python3 demand_predictor.py
+# Use ML_PORT to avoid conflict with Spring Boot (PORT=8080)
+ML_PORT=5001 python3 demand_predictor.py
 ```
 *Runs on `http://localhost:5001`*
 
@@ -171,7 +172,7 @@ npm run dev
 
 ### Billing & POS API
 - `POST /api/bills` — Process customer bill (validates stock, decreases stock, creates audit)
-- `GET /api/bills` — Fetch all customer bills
+- `GET /api/bills` — Fetch 50 most recent customer bills (paginated for Atlas performance)
 - Returns **HTTP 400** with `errorCode: INSUFFICIENT_STOCK` if stock is insufficient
 
 ### Purchases API
@@ -191,10 +192,10 @@ npm run dev
 ## 🤖 AI / Machine Learning Methodology
 
 ### Data Source
-When `MONGODB_URI` is configured, the ML module reads live sales data from the MongoDB `bills` collection. Otherwise, it uses a 1,440-sample historical dataset.
+When `MONGODB_URI` is configured, the ML module reads **live sales data** from the MongoDB `bills` collection (`MONGODB_LIVE` mode — verified: 545 bill-item records loaded). Otherwise, it uses a 1,440-sample `HISTORICAL_ENRICHED` fallback dataset.
 
 ### Feature Engineering
-Model input features: `medicine_id`, `day_of_week`, `day_of_month`, `month`
+Model input features: `medicine_id` (category-encoded), `day_of_week`, `day_of_month`, `month`
 
 ### Evaluated Models
 1. **Linear Regression**
@@ -229,9 +230,9 @@ $$\text{Recommended Reorder Qty} = \max\left(0, \text{Predicted 30-Day Demand} +
 | | `MONGODB_DATABASE` | `pharmacy_db` | Database name |
 | | `PORT` | `8080` | Backend HTTP port |
 | | `ML_SERVICE_URL` | `http://localhost:5001/api/predictions` | ML microservice URL |
-| **Python ML** | `MONGODB_URI` | *(optional)* | Atlas URI (falls back to historical data if absent) |
+| **Python ML** | `MONGODB_URI` | *(optional)* | Atlas URI (falls back to `HISTORICAL_ENRICHED` if absent) |
 | | `MONGODB_DATABASE` | `pharmacy_db` | Database name |
-| | `PORT` | `5001` | ML Flask port |
+| | `ML_PORT` | `5001` | ML Flask port (use `ML_PORT` not `PORT` to avoid conflict with Spring Boot) |
 | **React Frontend** | `VITE_API_URL` | `http://localhost:8080` | Spring Boot API base URL |
 
 ### Local Development

@@ -1,162 +1,179 @@
 # Project Documentation — AI-Powered Pharmacy Inventory & Billing System
 
-## Overview
-
-This system is a full-stack pharmacy management solution built for B.Tech CSE Final Year, featuring:
-- MongoDB Atlas cloud database (NoSQL)
-- Spring Boot REST API backend
-- React.js frontend (POS-style UI)
-- Python Flask ML service for demand prediction
-
----
-
-## Architecture
+## Final Architecture
 
 ```
-Browser (React UI)
-        │
-        │ HTTP REST API
-        ▼
-Spring Boot Backend (Java 17)
-        │
-        │ Spring Data MongoDB
-        ▼
-MongoDB Atlas (Cloud NoSQL)
-        │
-        │ PyMongo (aggregation pipeline)
-        ▼
-Python ML Module (Flask)
-        │
-        ▼
-Demand Prediction + Reorder Recommendations
+React Frontend  (Vite + React 18)
+       │
+       │  REST API over HTTP (CORS enabled)
+       ▼
+Spring Boot Backend  (Java 17+, Spring Boot 3.2.4, Spring Data MongoDB)
+       │
+       │  Spring Data MongoDB / MongoTemplate (SSL/TLS)
+       ▼
+MongoDB Atlas  (M0 Free Tier, pharmacy_db, 8 collections)
+       │
+       │  PyMongo direct read (historical bills)
+       ▼
+Python ML Service  (Flask + Scikit-Learn, port 5001)
+       │
+       ▼
+Demand Predictions  → Spring Boot → React Frontend
 ```
 
 ---
 
 ## Database: MongoDB Atlas
 
+- **Cluster**: `pharmacy-cluster` (M0 free tier, AWS ap-south-1)
+- **Database**: `pharmacy_db`
+- **MongoDB version**: 8.0.34
+
 ### Collections
 
-| Collection   | Type             | Key Fields |
-|--------------|------------------|------------|
-| categories   | Independent      | category_name, description |
-| suppliers    | Independent      | supplier_name, phone, email, address |
-| medicines    | Independent + DBRef | medicine_name, category (→categories), price, stock_quantity, expiry_date |
-| customers    | Independent      | customer_name, phone, email |
-| purchases    | Parent + Embedded | supplier (→suppliers), purchase_date, total_amount, items[] |
-| bills        | Parent + Embedded | customer (→customers), bill_date, total_amount, items[] |
-| stock_audit  | Independent      | medicine (→medicines), old_stock, new_stock, changed_at |
-| users        | Independent      | username, password, full_name, role |
+| Collection    | Documents | Description |
+|:------------- |----------:|:----------- |
+| categories    | 5  | Therapeutic categories |
+| suppliers     | 3  | Medicine distributors |
+| medicines     | 8  | Item master + stock + expiry |
+| customers     | 4  | Customer directory |
+| purchases     | 3+ | Inbound orders (embedded items) |
+| bills         | 270 | Customer invoices (embedded items) |
+| stock_audit   | 10+ | Automated stock change log |
+| users         | 2  | Admin + staff (dev-only demo credentials) |
 
-### Embedded Documents
+### Document Design
 
-**Purchase.items[]**
-```json
-{
-  "medicine_id": "ObjectId",
-  "medicine_name": "Paracetamol 500mg",
-  "quantity": 100,
-  "unit_price": 5.50,
-  "subtotal": 550.00
-}
-```
+- `purchases` and `bills` use **embedded arrays** for line items (denormalized)
+- `medicines → categories`: `@DBRef` (independent collections)
+- `purchases → suppliers`: `@DBRef`
+- `bills → customers`: `@DBRef`
 
-**Bill.items[]**
-```json
-{
-  "medicine_id": "ObjectId",
-  "medicine_name": "Paracetamol 500mg",
-  "quantity": 2,
-  "unit_price": 5.50,
-  "subtotal": 11.00
-}
-```
+### Date Fields
+All `expiry_date` and `manufacture_date` fields are stored as **BSON ISODate** (MongoDB `datetime`), not strings. This enables correct `findByExpiryDateBefore(LocalDate)` queries.
 
 ---
 
-## Business Logic (Service Layer)
+## Backend: Spring Boot
 
-All business logic that was previously implemented as PostgreSQL PL/pgSQL triggers is now implemented in the Spring Boot service layer.
+- **Port**: 8080
+- **Java**: OpenJDK 17+ (tested on OpenJDK 27)
+- **Connection**: `spring.data.mongodb.uri` from `MONGODB_URI` environment variable
+- **Database name**: `spring.data.mongodb.database` from `MONGODB_DATABASE` (default: `pharmacy_db`)
 
-### Purchase Flow
-1. Validate supplier exists
-2. For each item: validate medicine exists
-3. Build Purchase with embedded PurchaseItem array
-4. **Increase** `medicine.stock_quantity` by purchased quantity
-5. Create `StockAudit` document (old_stock → new_stock)
-6. Calculate `purchase.total_amount`
-7. Save Purchase to MongoDB
+### Business Logic (replaces PostgreSQL triggers)
 
-### Billing Flow
-1. Validate customer exists
-2. **Pre-validate ALL items** for sufficient stock (fail-fast — no partial updates)
-3. For each item: build BillItem with denormalized medicine name + current price
-4. **Decrease** `medicine.stock_quantity` by billed quantity
-5. Create `StockAudit` document (old_stock → new_stock)
-6. Calculate `bill.total_amount`
-7. Save Bill to MongoDB
+| Old PostgreSQL Trigger | Java Service Implementation |
+|:----------------------|:---------------------------|
+| `trg_increase_stock` + `increase_stock()` | `PurchaseService.createPurchase()` |
+| `trg_reduce_stock` + `reduce_stock()` | `BillingService.createBill()` |
+| `trg_stock_audit` + `audit_stock_change()` | Both services write to `stock_audit` |
+| `trg_update_purchase_total` | `PurchaseService` — inline calculation |
+| `trg_update_bill_total` | `BillingService` — inline calculation |
+| `low_stock_view` | `MedicineService.getLowStockMedicines()` |
+| `expiry_alert_view` | `MedicineService.getExpiryAlerts()` |
+| `sales_report` view | `ReportService.getSalesReport()` — MongoDB aggregation |
 
-### Insufficient Stock → HTTP 400
-```json
-{
-  "errorCode": "INSUFFICIENT_STOCK",
-  "message": "Insufficient stock for 'Paracetamol 500mg'. Available: 5, Requested: 10"
-}
-```
+### MongoDB Transactions
 
----
+MongoDB Atlas M0 (replica set) supports ACID multi-document transactions.
 
-## REST API Summary
+**Current implementation**: Application-level pre-validation ("Phase 1 stock check").  
+The `BillingService` validates ALL items for sufficient stock **before** any writes. If any item fails, no stock is modified. This ensures consistency for single-threaded request processing without explicit `ClientSession` transaction overhead.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | /api/categories | List categories |
-| POST | /api/categories | Create category |
-| PUT | /api/categories/{id} | Update category |
-| DELETE | /api/categories/{id} | Delete category |
-| GET | /api/suppliers | List suppliers |
-| POST | /api/suppliers | Create supplier |
-| PUT | /api/suppliers/{id} | Update supplier |
-| DELETE | /api/suppliers/{id} | Delete supplier |
-| GET | /api/medicines | List or search medicines |
-| POST | /api/medicines | Create medicine |
-| PUT | /api/medicines/{id} | Update medicine |
-| DELETE | /api/medicines/{id} | Delete medicine |
-| GET | /api/medicines/low-stock | Low-stock alert (stock ≤ 15) |
-| GET | /api/medicines/expiry-alerts | Expiring within 30 days |
-| GET | /api/customers | List customers |
-| POST | /api/customers | Create customer |
-| PUT | /api/customers/{id} | Update customer |
-| DELETE | /api/customers/{id} | Delete customer |
-| GET | /api/purchases | List purchases |
-| POST | /api/purchases | Create purchase (increases stock) |
-| GET | /api/bills | List bills |
-| POST | /api/bills | Create bill (validates + decreases stock) |
-| GET | /api/reports/inventory | Inventory report |
-| GET | /api/reports/sales | Sales report |
-| GET | /api/reports/audit | Stock audit log |
-| GET | /api/predictions | ML demand predictions |
+**For production scale**: Add explicit `ClientSession` transactions in `BillingService` and `PurchaseService` to handle concurrent billing of the same medicine stock.
+
+### Performance Notes
+
+- `GET /api/bills` returns the **50 most recent bills** by default.  
+  Returning all 270+ bills triggers N+1 `@DBRef` customer resolution over Atlas.
+- `GET /api/reports/sales` uses a **server-side MongoDB aggregation pipeline** (`$unwind → $group → $sort`).  
+  This avoids loading all bills into Java memory and runs entirely on Atlas.
 
 ---
 
-## ML Module
+## ML Service: Python Demand Predictor
 
-The Python Flask service (`pharmacy-ml/demand_predictor.py`):
-- Reads bill data from MongoDB Atlas via PyMongo aggregation pipeline
-- Trains Linear Regression + Random Forest Regressor models
-- Selects the best model by R² score
-- Returns 30-day demand predictions per medicine
-- Calculates recommended reorder quantity
-- Falls back to a 1,440-sample historical dataset when MongoDB is unavailable
+- **Port**: 5001 (use `ML_PORT=5001` — do NOT use `PORT` which conflicts with Spring Boot's 8080)
+- **Framework**: Flask + PyMongo + Scikit-Learn
+- **Data source**: `MONGODB_LIVE` when Atlas is reachable (545 bill-item records loaded in verified run)
+- **Fallback**: `HISTORICAL_ENRICHED` (1,440 synthetic samples)
+
+### Models Evaluated
+
+1. Linear Regression
+2. Random Forest Regressor (auto-selected if R² ≥ LinearRegression R²)
+
+### Predictions
+
+- 30-day demand per medicine
+- Recommended reorder quantity: `max(0, predicted_demand + safety_buffer(15) - current_stock)`
+
+### Key Fix (migration)
+`medicine_id` in MongoDB is a string ObjectId. The feature was encoded using `pd.Categorical().codes` so scikit-learn receives integer features.
+
+---
+
+## Frontend: React + Vite
+
+- **Port (dev)**: 3000
+- **Build**: `npm run build` → `dist/` (198 kB JS, gzip 56 kB)
+- **ID handling**: All entity IDs treated as **strings** (MongoDB ObjectId strings). No `parseInt()` on IDs.
 
 ---
 
 ## Environment Variables
 
-| Variable | Service | Description |
-|----------|---------|-------------|
-| `MONGODB_URI` | Backend + ML | MongoDB Atlas connection string |
-| `MONGODB_DATABASE` | Backend + ML | Database name (default: pharmacy_db) |
-| `PORT` | Backend / ML | HTTP server port |
-| `ML_SERVICE_URL` | Backend | URL of ML Flask service |
-| `VITE_API_URL` | Frontend | Spring Boot API base URL |
+| Service | Variable | Description |
+|:--------|:---------|:----------- |
+| Spring Boot | `MONGODB_URI` | Atlas connection string (required) |
+| Spring Boot | `MONGODB_DATABASE` | Database name (default: `pharmacy_db`) |
+| Spring Boot | `PORT` | HTTP port (default: 8080) |
+| Spring Boot | `ML_SERVICE_URL` | ML API URL (default: `http://localhost:5001/api/predictions`) |
+| ML Service | `MONGODB_URI` | Atlas URI (optional — falls back to HISTORICAL_ENRICHED) |
+| ML Service | `ML_PORT` | Flask port (default: 5001; avoids conflict with Spring Boot PORT) |
+| React | `VITE_API_URL` | Backend base URL (default: `http://localhost:8080`) |
+
+---
+
+## Security
+
+- `.env` is in `.gitignore` and is **never committed to Git**
+- `.env.example` contains placeholder URIs only (`<username>:<password>@<cluster>`)
+- No credentials committed to any tracked file
+- Demo seed credentials (`admin123`, `pharma123`) are **development-only** and documented as such
+- ML service has **no psycopg2 or PostgreSQL dependency**
+
+---
+
+## Seed Script
+
+```bash
+cd database/seed
+python3 seed_mongodb.py  # reads MONGODB_URI from .env
+```
+
+The seed is **idempotent** — safe to run multiple times. It generates 90 days of historical bills (544 items) for ML training.
+
+Demo users (development only, not for production):
+- `admin` / `admin123` (ADMIN role)
+- `pharmacist` / `pharma123` (STAFF role)
+
+---
+
+## Verified Test Results
+
+| Check | Result |
+|:------|:-------|
+| Atlas connection | ✅ PASS |
+| Seed data | ✅ PASS |
+| CRUD operations | ✅ PASS |
+| Purchase stock increase | ✅ PASS |
+| Billing stock decrease | ✅ PASS |
+| Insufficient stock rejection | ✅ PASS (HTTP 400) |
+| Expiry alerts | ✅ PASS (Amoxicillin 500mg, expiry 2026-10-28) |
+| Stock audit | ✅ PASS (10 entries) |
+| ML service | ✅ PASS (MONGODB_LIVE, 545 records, 9 predictions) |
+| Maven tests | ✅ 12/12 PASS |
+| Frontend build | ✅ PASS (198.32 kB) |
+| Security scan | ✅ PASS |
