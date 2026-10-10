@@ -1,5 +1,19 @@
 import requests, json, time, sys, os
 
+# Safely load environment variables from .env if present
+env_path = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(env_path):
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip("'").strip('"'))
+
+REG_CODE = os.getenv("EMPLOYEE_REGISTRATION_CODE") or "1234"
+ADMIN_BOOTSTRAP_PW = os.getenv("ADMIN_PASSWORD") or os.getenv("ADMIN_BOOTSTRAP_PASSWORD")
+
+
 BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 results = []
 
@@ -54,7 +68,7 @@ mismatch_reg = {
     "firstName": "Mismatch",
     "lastName": f"User{ts}",
     "employeeId": f"MISMATCH-{ts}",
-    "employeeCode": os.getenv("EMPLOYEE_REGISTRATION_CODE", "1234"),
+    "employeeCode": REG_CODE,
     "email": f"mismatch{ts}@pharmacare.com",
     "phone": "9876543210",
     "password": "Password@123",
@@ -76,7 +90,7 @@ valid_reg = {
     "firstName": "Cashier",
     "lastName": f"Live{ts}",
     "employeeId": cashier_emp_id,
-    "employeeCode": os.getenv("EMPLOYEE_REGISTRATION_CODE", "1234"),
+    "employeeCode": REG_CODE,
     "email": f"cashier.live{ts}@pharmacare.com",
     "phone": "9876543210",
     "password": cashier_raw_pass,
@@ -160,7 +174,7 @@ else:
 # -------------------------------------------------------------------------
 # Read strictly from environment or .env; no hard-coded password fallback
 admin_id = os.getenv("ADMIN_BOOTSTRAP_ID") or os.getenv("ADMIN_ID")
-admin_password = os.getenv("ADMIN_PASSWORD") or os.getenv("ADMIN_BOOTSTRAP_PASSWORD")
+admin_password = ADMIN_BOOTSTRAP_PW or os.getenv("ADMIN_BOOTSTRAP_PASSWORD")
 
 if (not admin_id or not admin_password) and os.path.exists(".env"):
     for line in open(".env"):
