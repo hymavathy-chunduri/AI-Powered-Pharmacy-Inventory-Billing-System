@@ -1,7 +1,7 @@
 package com.pharmacy.pharmacy_backend.entity;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -18,7 +18,7 @@ public class StockAudit {
     @Id
     private String id;
 
-    @DBRef
+    @DocumentReference(lazy = false)
     @Field("medicine")
     private Medicine medicine;
 
@@ -86,5 +86,28 @@ public class StockAudit {
 
     public void setChangedAt(LocalDateTime changedAt) {
         this.changedAt = changedAt;
+    }
+
+    // Frontend compatibility getters
+    public Integer getOldQuantity() {
+        return oldStock;
+    }
+
+    public Integer getNewQuantity() {
+        return newStock;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return changedAt;
+    }
+
+    public Integer getQuantityChange() {
+        if (newStock == null || oldStock == null) return 0;
+        return newStock - oldStock;
+    }
+
+    public String getChangeType() {
+        if (newStock == null || oldStock == null) return "UNKNOWN";
+        return newStock >= oldStock ? "INCREASE" : "REDUCE";
     }
 }

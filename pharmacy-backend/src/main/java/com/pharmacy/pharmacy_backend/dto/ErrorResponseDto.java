@@ -25,6 +25,10 @@ public class ErrorResponseDto {
         return error;
     }
 
+    public String getStatus() {
+        return error;
+    }
+
     public void setError(String error) {
         this.error = error;
     }

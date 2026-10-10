@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -26,7 +26,7 @@ public class Medicine {
      * This preserves the relational semantic: medicines belong to a category.
      */
     @NotNull(message = "Category is required")
-    @DBRef
+    @DocumentReference(lazy = false)
     private Category category;
 
     @NotNull(message = "Price is required")

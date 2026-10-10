@@ -30,7 +30,7 @@ public class PredictionController {
     }
 
     @GetMapping("/{medicineId}")
-    public ResponseEntity<?> getPredictionByMedicineId(@PathVariable Long medicineId) {
+    public ResponseEntity<?> getPredictionByMedicineId(@PathVariable String medicineId) {
         try {
             Map<?, ?> response = restTemplate.getForObject(mlServiceUrl + "/" + medicineId, Map.class);
             return ResponseEntity.ok(response);

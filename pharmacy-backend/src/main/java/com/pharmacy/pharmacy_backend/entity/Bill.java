@@ -1,7 +1,7 @@
 package com.pharmacy.pharmacy_backend.entity;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Bill document — contains embedded BillItem array.
  * Customer is a DBRef (independent collection).
- * Business logic (stock check, reduce, audit) is handled in BillingService.
+ * Tracks the authenticated employee who created the bill.
  */
 @Document(collection = "bills")
 public class Bill {
@@ -21,7 +21,7 @@ public class Bill {
     @Id
     private String id;
 
-    @DBRef
+    @DocumentReference(lazy = false)
     @Field("customer")
     private Customer customer;
 
@@ -30,6 +30,12 @@ public class Bill {
 
     @Field("total_amount")
     private BigDecimal totalAmount;
+
+    @Field("created_by_employee_id")
+    private String createdByEmployeeId;
+
+    @Field("created_by_employee_name")
+    private String createdByEmployeeName;
 
     @Field("items")
     private List<BillItem> items = new ArrayList<>();
@@ -74,6 +80,22 @@ public class Bill {
 
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
+    }
+
+    public String getCreatedByEmployeeId() {
+        return createdByEmployeeId;
+    }
+
+    public void setCreatedByEmployeeId(String createdByEmployeeId) {
+        this.createdByEmployeeId = createdByEmployeeId;
+    }
+
+    public String getCreatedByEmployeeName() {
+        return createdByEmployeeName;
+    }
+
+    public void setCreatedByEmployeeName(String createdByEmployeeName) {
+        this.createdByEmployeeName = createdByEmployeeName;
     }
 
     public List<BillItem> getItems() {

@@ -64,17 +64,17 @@ public class ReportService {
      * and eliminates N+1 customer DBRef resolution overhead on Atlas M0.
      */
     public List<Map<String, Object>> getSalesReport() {
-        org.bson.Document unwindStage = new org.bson.Document("$unwind", "$items");
-        org.bson.Document groupStage = new org.bson.Document("$group", new org.bson.Document()
-                .append("_id", "$items.medicine_id")
-                .append("medicine_name", new org.bson.Document("$first", "$items.medicine_name"))
-                .append("total_quantity_sold", new org.bson.Document("$sum", "$items.quantity"))
-                .append("total_revenue", new org.bson.Document("$sum", "$items.subtotal"))
-        );
         org.bson.Document sortStage = new org.bson.Document("$sort",
-                new org.bson.Document("total_revenue", -1));
+                new org.bson.Document("bill_date", -1));
+        org.bson.Document limitStage = new org.bson.Document("$limit", 50);
+        org.bson.Document lookupStage = new org.bson.Document("$lookup", new org.bson.Document()
+                .append("from", "customers")
+                .append("localField", "customer")
+                .append("foreignField", "_id")
+                .append("as", "customer_doc")
+        );
 
-        List<org.bson.Document> pipeline = Arrays.asList(unwindStage, groupStage, sortStage);
+        List<org.bson.Document> pipeline = Arrays.asList(sortStage, limitStage, lookupStage);
 
         List<org.bson.Document> raw = new ArrayList<>();
         mongoTemplate.getDb().getCollection("bills").aggregate(pipeline).into(raw);
@@ -82,18 +82,41 @@ public class ReportService {
         List<Map<String, Object>> result = new ArrayList<>();
         for (org.bson.Document doc : raw) {
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("medicine_id", doc.getString("_id"));
-            row.put("medicine_name", doc.getString("medicine_name"));
-            row.put("total_quantity_sold", doc.getInteger("total_quantity_sold", 0));
-            // Handle both Double and Decimal128 from MongoDB
-            Object rev = doc.get("total_revenue");
-            if (rev instanceof org.bson.types.Decimal128) {
-                row.put("total_revenue", ((org.bson.types.Decimal128) rev).bigDecimalValue());
-            } else if (rev instanceof Double) {
-                row.put("total_revenue", BigDecimal.valueOf((Double) rev));
-            } else {
-                row.put("total_revenue", BigDecimal.ZERO);
+            Object idObj = doc.get("_id");
+            String idStr = idObj != null ? idObj.toString() : "";
+            row.put("bill_id", idStr);
+            row.put("billId", idStr);
+
+            @SuppressWarnings("unchecked")
+            List<org.bson.Document> custDocs = (List<org.bson.Document>) doc.get("customer_doc");
+            String custName = "Customer";
+            if (custDocs != null && !custDocs.isEmpty()) {
+                custName = custDocs.get(0).getString("customer_name");
+                if (custName == null) custName = "Customer";
             }
+            row.put("customer_name", custName);
+            row.put("customerName", custName);
+
+            Object bDate = doc.get("bill_date");
+            if (bDate instanceof java.util.Date) {
+                row.put("bill_date", new java.text.SimpleDateFormat("yyyy-MM-dd").format((java.util.Date) bDate));
+            } else if (bDate != null) {
+                row.put("bill_date", bDate.toString());
+            } else {
+                row.put("bill_date", "Recent");
+            }
+
+            Object total = doc.get("total_amount");
+            if (total instanceof org.bson.types.Decimal128) {
+                row.put("total_amount", ((org.bson.types.Decimal128) total).bigDecimalValue());
+            } else if (total instanceof Double) {
+                row.put("total_amount", BigDecimal.valueOf((Double) total));
+            } else if (total instanceof Number) {
+                row.put("total_amount", BigDecimal.valueOf(((Number) total).doubleValue()));
+            } else {
+                row.put("total_amount", BigDecimal.ZERO);
+            }
+            row.put("totalAmount", row.get("total_amount"));
             result.add(row);
         }
         return result;
