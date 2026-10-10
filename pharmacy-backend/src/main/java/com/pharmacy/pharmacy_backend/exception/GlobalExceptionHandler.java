@@ -1,6 +1,7 @@
 package com.pharmacy.pharmacy_backend.exception;
 
 import com.pharmacy.pharmacy_backend.dto.ErrorResponseDto;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -61,6 +62,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDto> handleBadCredentials(org.springframework.security.authentication.BadCredentialsException ex) {
         ErrorResponseDto error = new ErrorResponseDto("AUTHENTICATION_FAILED", ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ErrorResponseDto> handleDataAccessException(DataAccessException ex) {
+        ErrorResponseDto error = new ErrorResponseDto("DATABASE_UNAVAILABLE", "Database service is temporarily unavailable. Please verify database connectivity.");
+        return new ResponseEntity<>(error, HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ExceptionHandler(Exception.class)

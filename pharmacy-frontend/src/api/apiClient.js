@@ -1,7 +1,22 @@
 /**
  * Shared API client for PharmaCare.
- * Automatically sends session cookies (credentials: 'include') and handles authentication lifecycle.
+ * Automatically resolves production API URLs, sends session cookies (credentials: 'include'),
+ * and handles authentication lifecycle.
  */
+
+const RAW_API_URL = import.meta.env.VITE_API_URL || '';
+export const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+
+export function resolveApiUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  if (path.startsWith('/api') && API_BASE_URL) {
+    return `${API_BASE_URL}${path}`;
+  }
+  return path;
+}
 
 let unauthorizedDebounceTimer = null;
 
@@ -14,27 +29,35 @@ function notifyUnauthorized(url) {
   window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { url } }));
 }
 
-// Global interceptor for all fetch calls to ensure credentials: 'include'
+// Global interceptor for all fetch calls to ensure credentials: 'include' and resolve API URL
 if (typeof window !== 'undefined' && window.fetch) {
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
-    const url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+    let resolvedInput = input;
+    let url = '';
+    if (typeof input === 'string') {
+      url = input;
+      resolvedInput = resolveApiUrl(input);
+    } else if (input instanceof Request) {
+      url = input.url;
+    }
     const modifiedInit = { ...init };
 
-    if (url.includes('/api/') || (typeof input === 'string' && input.startsWith('/api'))) {
+    if (url.includes('/api/') || url.startsWith('/api') || (typeof resolvedInput === 'string' && resolvedInput.includes('/api/'))) {
       if (!modifiedInit.credentials) {
         modifiedInit.credentials = 'include';
       }
     }
 
-    const response = await nativeFetch(input, modifiedInit);
+    const response = await nativeFetch(resolvedInput, modifiedInit);
 
-    // If session expired and trying to access a protected endpoint (excluding /api/auth/login, register, me)
+    // If session expired and trying to access a protected endpoint (excluding /api/auth/login, register, me, health)
     if (
       response.status === 401 &&
       !url.includes('/api/auth/login') &&
       !url.includes('/api/auth/register') &&
-      !url.includes('/api/auth/me')
+      !url.includes('/api/auth/me') &&
+      !url.includes('/api/health')
     ) {
       notifyUnauthorized(url);
     }
@@ -44,6 +67,7 @@ if (typeof window !== 'undefined' && window.fetch) {
 }
 
 export async function apiRequest(url, options = {}) {
+  const resolvedUrl = resolveApiUrl(url);
   const defaultHeaders = {
     'Accept': 'application/json',
     ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
@@ -56,7 +80,7 @@ export async function apiRequest(url, options = {}) {
     headers: defaultHeaders,
   };
 
-  return fetch(url, config);
+  return fetch(resolvedUrl, config);
 }
 
 export const api = {

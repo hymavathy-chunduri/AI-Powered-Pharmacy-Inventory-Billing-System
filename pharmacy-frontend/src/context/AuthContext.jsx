@@ -42,14 +42,19 @@ export function AuthProvider({ children }) {
     setAuthError(null);
     try {
       const res = await api.post('/api/auth/login', { identifier, password });
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        // Non-JSON response
+      }
 
       if (res.ok) {
         setEmployee(data);
         setAuthError(null);
         return { success: true, employee: data };
       } else {
-        const msg = data.message || 'Authentication failed. Please check your credentials.';
+        const msg = data.message || (res.status === 401 ? 'Authentication failed. Please check your credentials.' : `Authentication failed (${res.status}).`);
         setAuthError(msg);
         return { success: false, error: msg };
       }

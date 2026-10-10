@@ -109,7 +109,12 @@ export default function Login({ onSuccess }) {
     setRegLoading(true);
     try {
       const res = await api.post('/api/auth/register', regData);
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        // Non-JSON response
+      }
 
       if (res.ok) {
         setRegSuccess(`Account successfully created for ${data.fullName || data.employeeId}! You can now sign in.`);
@@ -124,10 +129,18 @@ export default function Login({ onSuccess }) {
           confirmPassword: ''
         });
       } else {
-        setRegError(data.message || 'Registration failed. Please check your details.');
+        if (res.status === 401) {
+          setRegError(data.message || 'Invalid employee registration code. Authorization required.');
+        } else if (res.status === 409) {
+          setRegError(data.message || 'Employee ID or email is already registered.');
+        } else if (res.status === 503) {
+          setRegError(data.message || 'Database service is temporarily unavailable. Please try again shortly.');
+        } else {
+          setRegError(data.message || `Registration failed (${res.status}). Please check your details.`);
+        }
       }
     } catch (err) {
-      setRegError('Unable to connect to registration server. Please try again.');
+      setRegError('Unable to connect to registration server. Please verify backend is running.');
     } finally {
       setRegLoading(false);
     }
