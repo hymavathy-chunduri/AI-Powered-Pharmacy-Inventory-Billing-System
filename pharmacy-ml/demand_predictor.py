@@ -15,7 +15,18 @@ app = Flask(__name__)
 CORS(app)
 
 # MongoDB connection settings — read from environment variables ONLY
-MONGODB_URI = os.getenv("MONGODB_URI")
+def clean_uri(raw):
+    if not raw:
+        return raw
+    s = raw.strip()
+    for prefix in ["export MONGODB_URI=", "MONGODB_URI=", "MONGODB_URI:", "MONGODB_URI ="]:
+        if s.startswith(prefix):
+            s = s[len(prefix):].strip()
+    if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
+        s = s[1:-1].strip()
+    return s
+
+MONGODB_URI = clean_uri(os.getenv("MONGODB_URI"))
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "pharmacy_db")
 
 
