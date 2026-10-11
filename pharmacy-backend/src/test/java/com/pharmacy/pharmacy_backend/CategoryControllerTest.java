@@ -15,12 +15,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.springframework.security.test.context.support.WithMockUser;
 
 /**
- * Uses embedded Flapdoodle MongoDB (no PostgreSQL required).
- * @Transactional removed — MongoDB doesn't use JPA transactions.
+ * Validates Category controller operations, role permissions, and regression prevention.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@WithMockUser(username = "admin", roles = {"ADMIN"})
 public class CategoryControllerTest {
 
     @Autowired
@@ -30,7 +28,8 @@ public class CategoryControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void testCategoryCRUD() throws Exception {
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void testCategoryCRUDForAdmin() throws Exception {
         mockMvc.perform(get("/api/categories"))
                 .andExpect(status().isOk());
 
@@ -47,9 +46,30 @@ public class CategoryControllerTest {
 
         Category created = objectMapper.readValue(response, Category.class);
 
-        // getCategoryId() returns the String MongoDB ObjectId
         mockMvc.perform(get("/api/categories/" + created.getCategoryId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.categoryName").value(cat.getCategoryName()));
+    }
+
+    @Test
+    @WithMockUser(username = "cashier", roles = {"CASHIER"})
+    void testCategoryReadPermittedForCashier() throws Exception {
+        // Cashiers must be able to view categories in the pharmacy
+        mockMvc.perform(get("/api/categories"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "cashier", roles = {"CASHIER"})
+    void testCategoryWriteForbiddenForCashier() throws Exception {
+        // Cashiers cannot create or modify categories
+        Category cat = new Category();
+        cat.setCategoryName("Forbidden Category");
+        cat.setDescription("Should fail");
+
+        mockMvc.perform(post("/api/categories")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(cat)))
+                .andExpect(status().isForbidden());
     }
 }

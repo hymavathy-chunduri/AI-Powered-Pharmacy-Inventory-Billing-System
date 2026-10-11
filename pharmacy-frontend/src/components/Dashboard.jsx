@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Pill, AlertTriangle, Clock, DollarSign, Users, TrendingUp } from 'lucide-react';
+import { Pill, AlertTriangle, Clock, DollarSign, Users, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
+import { api } from '../api/apiClient';
 
 export default function Dashboard({ onNavigate }) {
   const [stats, setStats] = useState({
@@ -21,11 +22,11 @@ export default function Dashboard({ onNavigate }) {
     setLoading(true);
     try {
       const [medsRes, lowStockRes, expiryRes, custRes, billsRes] = await Promise.all([
-        fetch('/api/medicines').then(r => r.ok ? r.json() : []),
-        fetch('/api/medicines/low-stock').then(r => r.ok ? r.json() : []),
-        fetch('/api/medicines/expiry-alerts').then(r => r.ok ? r.json() : []),
-        fetch('/api/customers').then(r => r.ok ? r.json() : []),
-        fetch('/api/bills').then(r => r.ok ? r.json() : [])
+        api.get('/api/medicines').then(r => r.ok ? r.json() : []).catch(() => []),
+        api.get('/api/medicines/low-stock').then(r => r.ok ? r.json() : []).catch(() => []),
+        api.get('/api/medicines/expiry-alerts').then(r => r.ok ? r.json() : []).catch(() => []),
+        api.get('/api/customers').then(r => r.ok ? r.json() : []).catch(() => []),
+        api.get('/api/bills').then(r => r.ok ? r.json() : []).catch(() => [])
       ]);
 
       setStats({
@@ -57,7 +58,14 @@ export default function Dashboard({ onNavigate }) {
         </button>
       </div>
 
-      <div className="stats-grid">
+      {loading ? (
+        <div className="panel" style={{ textAlign: 'center', padding: '3.5rem 1rem', marginBottom: '1.5rem' }}>
+          <Loader2 size={32} className="spin-animation text-cyan" style={{ margin: '0 auto 1rem' }} />
+          <p className="text-muted" style={{ margin: 0 }}>Loading live pharmacy dashboard metrics...</p>
+        </div>
+      ) : (
+        <>
+          <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
             <Pill size={24} />
@@ -164,6 +172,8 @@ export default function Dashboard({ onNavigate }) {
           </table>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

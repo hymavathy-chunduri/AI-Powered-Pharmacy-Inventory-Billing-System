@@ -40,7 +40,7 @@ jobs:
       - name: Build Vite app
         working-directory: pharmacy-frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL || 'https://pharmacy-backend.onrender.com' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL || 'https://pharmacy-backend-t0oi.onrender.com' }}
         run: npm run build
 
       - name: Verify dist/index.html exists

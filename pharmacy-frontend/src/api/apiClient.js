@@ -1,11 +1,28 @@
 /**
  * Shared API client for PharmaCare.
  * Automatically resolves production API URLs, sends session cookies (credentials: 'include'),
- * and handles authentication lifecycle.
+ * supports sensible timeouts, and manages authentication lifecycle.
  */
 
-const RAW_API_URL = import.meta.env.VITE_API_URL || '';
-export const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+const DEFAULT_PROD_BACKEND_URL = 'https://pharmacy-backend-t0oi.onrender.com';
+
+const getInitialBaseUrl = () => {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  // If explicitly configured to the outdated non-existent URL, rewrite to the active deployed URL
+  if (envUrl === 'https://pharmacy-backend.onrender.com') {
+    return DEFAULT_PROD_BACKEND_URL;
+  }
+  if (envUrl) {
+    return envUrl;
+  }
+  // When running on GitHub Pages and no variable was provided at build time
+  if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
+    return DEFAULT_PROD_BACKEND_URL;
+  }
+  return '';
+};
+
+export const API_BASE_URL = getInitialBaseUrl().replace(/\/+$/, '');
 
 export function resolveApiUrl(path) {
   if (!path) return '';
@@ -74,13 +91,29 @@ export async function apiRequest(url, options = {}) {
     ...options.headers,
   };
 
+  // Add sensible 30-second timeout if none provided
+  const timeoutMs = options.timeout || 30000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   const config = {
     ...options,
     credentials: 'include',
     headers: defaultHeaders,
+    signal: options.signal || controller.signal,
   };
 
-  return fetch(resolvedUrl, config);
+  try {
+    const res = await fetch(resolvedUrl, config);
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out. The server may be waking up from sleep or experiencing network delays.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export const api = {

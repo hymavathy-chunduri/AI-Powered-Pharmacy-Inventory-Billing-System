@@ -40,7 +40,7 @@ function MainApp() {
 
   // If role changes or is restricted, return to dashboard
   useEffect(() => {
-    if (isCashier && ['purchases', 'suppliers', 'categories', 'reports', 'prediction', 'employees'].includes(activeTab)) {
+    if (isCashier && ['purchases', 'suppliers', 'reports', 'prediction', 'employees'].includes(activeTab)) {
       setActiveTab('dashboard');
     } else if (isPharmacist && activeTab === 'employees') {
       setActiveTab('dashboard');
@@ -181,16 +181,14 @@ function MainApp() {
             </li>
           )}
 
-          {/* Categories: Admin and Pharmacist only */}
-          {!isCashier && (
-            <li
-              className={`nav-item ${activeTab === 'categories' ? 'active' : ''}`}
-              onClick={() => setActiveTab('categories')}
-              id="nav-categories"
-            >
-              <Tag size={18} /> Categories
-            </li>
-          )}
+          {/* Categories: Medicine therapeutic classifications */}
+          <li
+            className={`nav-item ${activeTab === 'categories' ? 'active' : ''}`}
+            onClick={() => setActiveTab('categories')}
+            id="nav-categories"
+          >
+            <Tag size={18} /> Categories
+          </li>
 
           {/* Reports: Admin and Pharmacist only */}
           {!isCashier && (
@@ -299,7 +297,7 @@ function MainApp() {
           {activeTab === 'purchases' && !isCashier && <Purchases />}
           {activeTab === 'customers' && <Customers />}
           {activeTab === 'suppliers' && !isCashier && <Suppliers />}
-          {activeTab === 'categories' && !isCashier && <Categories />}
+          {activeTab === 'categories' && <Categories />}
           {activeTab === 'reports' && !isCashier && <Reports />}
           {activeTab === 'prediction' && !isCashier && <DemandPrediction />}
           {activeTab === 'employees' && isAdmin && <Employees />}
