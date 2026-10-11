@@ -72,7 +72,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/purchases/**", "/api/suppliers/**").hasAnyRole("ADMIN", "PHARMACIST")
 
                 // Reports: Admin and Pharmacist
-                .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "PHARMACIST")
+                .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "PHARMACIST", "CASHIER")
 
                 // AI Demand Predictions: Admin and Pharmacist
                 .requestMatchers("/api/predictions/**").hasAnyRole("ADMIN", "PHARMACIST")

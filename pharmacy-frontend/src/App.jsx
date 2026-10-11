@@ -81,7 +81,7 @@ function MainApp() {
 
   const getTabTitle = (tab) => {
     switch (tab) {
-      case 'my-bills': return 'My Bills';
+      case 'my-bills': return 'All Invoices & Billings';
       case 'activity': return 'Employee Activity';
       case 'login-history': return 'Login History';
       case 'prediction': return 'AI Demand Prediction';
@@ -124,7 +124,7 @@ function MainApp() {
             onClick={() => setActiveTab('my-bills')}
             id="nav-my-bills"
           >
-            <Receipt size={18} /> {isAdmin ? 'All Invoices' : 'My Bills'}
+            <Receipt size={18} /> All Invoices & Billings
           </li>
 
           <li

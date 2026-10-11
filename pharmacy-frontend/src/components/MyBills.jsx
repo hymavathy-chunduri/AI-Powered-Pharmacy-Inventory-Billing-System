@@ -1,37 +1,38 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Receipt, Search, RefreshCw, Eye, Printer, Calendar, User, CreditCard, CheckCircle2, X } from 'lucide-react';
-import { api } from '../api/apiClient';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect, useCallback } from "react";
+import { Receipt, Search, RefreshCw, Eye, Printer, Calendar, User, CreditCard, CheckCircle2, X } from "lucide-react";
+import { api } from "../api/apiClient";
+import { useAuth } from "../context/AuthContext";
 
 export default function MyBills() {
   const { isAdmin, employee } = useAuth();
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchFilter, setSearchFilter] = useState('');
+  const [searchFilter, setSearchFilter] = useState("");
   const [selectedBill, setSelectedBill] = useState(null);
+  const [viewMode, setViewMode] = useState("all"); // "all" for all billings, "my" for current employee
 
   const fetchBills = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Admin fetches /api/bills, employee fetches /api/bills/my
-      const url = isAdmin ? '/api/bills' : '/api/bills/my';
+      // Default: fetch all bills across all cashiers and counters
+      const url = viewMode === "my" ? "/api/bills/my" : "/api/bills";
       const res = await api.get(url);
       if (res.ok) {
         const data = await res.json();
         setBills(Array.isArray(data) ? data : []);
       } else {
         const err = await res.json().catch(() => ({}));
-        setError(err.message || 'Failed to retrieve bills.');
+        setError(err.message || "Failed to retrieve billing records.");
       }
     } catch (err) {
-      setError('Network error while loading billing records.');
+      setError("Network error while loading billing records.");
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [viewMode]);
 
   useEffect(() => {
     fetchBills();
@@ -40,18 +41,18 @@ export default function MyBills() {
   const filteredBills = bills.filter(bill => {
     if (!searchFilter.trim()) return true;
     const term = searchFilter.toLowerCase();
-    const id = (bill.billId || bill.id || '').toLowerCase();
-    const custName = (bill.customer?.customerName || '').toLowerCase();
-    const empId = (bill.createdByEmployeeId || '').toLowerCase();
-    const empName = (bill.createdByEmployeeName || '').toLowerCase();
+    const id = (bill.billId || bill.id || "").toLowerCase();
+    const custName = (bill.customer?.customerName || "").toLowerCase();
+    const empId = (bill.createdByEmployeeId || "").toLowerCase();
+    const empName = (bill.createdByEmployeeName || "").toLowerCase();
     return id.includes(term) || custName.includes(term) || empId.includes(term) || empName.includes(term);
   });
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '—';
+    if (!dateStr) return "—";
     try {
       const d = new Date(dateStr);
-      return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
     } catch (e) {
       return dateStr;
     }
@@ -67,22 +68,46 @@ export default function MyBills() {
       <div className="module-header">
         <div>
           <h2 className="module-title">
-            {isAdmin ? 'Pharmacy Sales & Invoices' : 'My Processed Bills'}
+            All Invoices &amp; Pharmacy Billings
           </h2>
           <p className="module-subtitle">
-            {isAdmin
-              ? 'Complete billing history across all pharmacy cashiers and counters'
-              : `Bills and customer invoices issued by ${employee?.fullName || 'Employee'} (${employee?.employeeId || ''})`}
+            {viewMode === "all"
+              ? "Complete billing records and customer invoices across all pharmacy cashiers and counters"
+              : `Bills and customer invoices issued by ${employee?.fullName || "Employee"} (${employee?.employeeId || ""})`}
           </p>
         </div>
-        <button
-          className="btn btn-secondary"
-          onClick={fetchBills}
-          disabled={loading}
-          id="btn-refresh-bills"
-        >
-          <RefreshCw size={16} className={loading ? 'spin-animation' : ''} /> Refresh
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {/* Toggle View Mode Buttons */}
+          <div style={{ display: "inline-flex", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--border-color, #334155)" }}>
+            <button
+              type="button"
+              className={`btn btn-sm ${viewMode === "all" ? "btn-primary" : "btn-secondary"}`}
+              style={{ borderRadius: 0, padding: "0.4rem 0.75rem" }}
+              onClick={() => setViewMode("all")}
+              id="btn-view-all-bills"
+            >
+              All Billings ({bills.length && viewMode === "all" ? bills.length : "All"})
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${viewMode === "my" ? "btn-primary" : "btn-secondary"}`}
+              style={{ borderRadius: 0, padding: "0.4rem 0.75rem" }}
+              onClick={() => setViewMode("my")}
+              id="btn-view-my-bills"
+            >
+              My Processed Bills
+            </button>
+          </div>
+
+          <button
+            className="btn btn-secondary"
+            onClick={fetchBills}
+            disabled={loading}
+            id="btn-refresh-bills"
+          >
+            <RefreshCw size={16} className={loading ? "spin-animation" : ""} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -117,20 +142,22 @@ export default function MyBills() {
               <th>Items</th>
               <th>Total Amount</th>
               <th>Processed By</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
+              <th style={{ textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
                 <td colSpan="7" className="text-center py-4 text-muted">
-                  Loading bills...
+                  Loading billing records...
                 </td>
               </tr>
             ) : filteredBills.length === 0 ? (
               <tr>
                 <td colSpan="7" className="text-center py-4 text-muted">
-                  No billing records found.
+                  {viewMode === "my"
+                    ? "No billing records issued by your account yet."
+                    : "No pharmacy billing records found."}
                 </td>
               </tr>
             ) : (
@@ -146,20 +173,20 @@ export default function MyBills() {
                       {formatDate(b.billDate)}
                     </td>
                     <td className="font-semibold">
-                      {b.customer?.customerName || 'Walk-in Customer'}
+                      {b.customer?.customerName || "Walk-in Customer"}
                     </td>
                     <td>
-                      <span className="badge badge-gray">{itemsCount} item{itemsCount !== 1 ? 's' : ''}</span>
+                      <span className="badge badge-gray">{itemsCount} item{itemsCount !== 1 ? "s" : ""}</span>
                     </td>
                     <td className="font-bold text-emerald">
                       ₹{Number(b.totalAmount || 0).toFixed(2)}
                     </td>
                     <td className="text-sm">
                       <span className="badge badge-indigo">
-                        {b.createdByEmployeeName || b.createdByEmployeeId || 'Counter Staff'}
+                        {b.createdByEmployeeName || b.createdByEmployeeId || "Counter Staff"}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: "right" }}>
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={() => setSelectedBill(b)}
@@ -181,7 +208,7 @@ export default function MyBills() {
         <div className="modal-backdrop" onClick={() => setSelectedBill(null)}>
           <div className="modal-card modal-receipt" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <Receipt size={20} className="text-emerald" />
                 <h3 className="modal-title">Tax Invoice #{selectedBill.billId || selectedBill.id}</h3>
               </div>
@@ -197,8 +224,8 @@ export default function MyBills() {
               <div className="receipt-meta-grid">
                 <div>
                   <span className="receipt-label">Customer Name:</span>
-                  <div className="receipt-val">{selectedBill.customer?.customerName || 'Walk-in Customer'}</div>
-                  <div className="text-muted text-xs">{selectedBill.customer?.phone || ''}</div>
+                  <div className="receipt-val">{selectedBill.customer?.customerName || "Walk-in Customer"}</div>
+                  <div className="text-muted text-xs">{selectedBill.customer?.phone || ""}</div>
                 </div>
                 <div>
                   <span className="receipt-label">Invoice Date:</span>
@@ -217,18 +244,18 @@ export default function MyBills() {
                   <thead>
                     <tr>
                       <th>Medicine</th>
-                      <th style={{ textAlign: 'center' }}>Qty</th>
-                      <th style={{ textAlign: 'right' }}>Unit Price</th>
-                      <th style={{ textAlign: 'right' }}>Subtotal</th>
+                      <th style={{ textAlign: "center" }}>Qty</th>
+                      <th style={{ textAlign: "right" }}>Unit Price</th>
+                      <th style={{ textAlign: "right" }}>Subtotal</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(selectedBill.items || []).map((item, idx) => (
                       <tr key={idx}>
                         <td className="font-semibold">{item.medicineName || item.medicineId}</td>
-                        <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right' }}>₹{Number(item.unitPrice || 0).toFixed(2)}</td>
-                        <td style={{ textAlign: 'right' }} className="font-semibold">
+                        <td style={{ textAlign: "center" }}>{item.quantity}</td>
+                        <td style={{ textAlign: "right" }}>₹{Number(item.unitPrice || 0).toFixed(2)}</td>
+                        <td style={{ textAlign: "right" }} className="font-semibold">
                           ₹{Number(item.subtotal || 0).toFixed(2)}
                         </td>
                       </tr>
@@ -236,8 +263,8 @@ export default function MyBills() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan="3" style={{ textAlign: 'right', fontWeight: 600 }}>Total Amount:</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, fontSize: '1.1rem' }} className="text-emerald">
+                      <td colSpan="3" style={{ textAlign: "right", fontWeight: 600 }}>Total Amount:</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, fontSize: "1.1rem" }} className="text-emerald">
                         ₹{Number(selectedBill.totalAmount || 0).toFixed(2)}
                       </td>
                     </tr>
